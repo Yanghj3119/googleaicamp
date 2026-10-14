@@ -1,0 +1,2022 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>생존왕 (SURVIVAL KING) - EXTREME HARDCORE EDITION</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        king: {
+                            bg: '#07090e',
+                            card: '#0f1420',
+                            cardHover: '#161e30',
+                            border: '#1a2336',
+                            gold: '#ffd700',
+                            neonCyan: '#00f0ff',
+                            neonPink: '#ff0055',
+                            neonGreen: '#00ff88',
+                            accent: '#3b82f6'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
+                        mono: ['Courier New', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+        body {
+            background-color: #07090e;
+            color: #f3f4f6;
+            font-family: 'Pretendard', sans-serif;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(255, 0, 85, 0.15) 0%, transparent 45%),
+                radial-gradient(circle at 80% 80%, rgba(255, 215, 0, 0.08) 0%, transparent 45%);
+            min-height: 100vh;
+        }
+
+        .glow-gold {
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.3);
+        }
+        .glow-pink {
+            box-shadow: 0 0 25px rgba(255, 0, 85, 0.35);
+        }
+
+        .panel-card-img {
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), filter 0.6s ease;
+        }
+        .panel-card:hover .panel-card-img {
+            transform: scale(1.08);
+            filter: brightness(1.1);
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #07090e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1a2336;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ff0055;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .shimmer-text {
+            background: linear-gradient(90deg, #ffd700, #ffffff, #00f0ff, #ffd700);
+            background-size: 200% auto;
+            color: transparent;
+            -webkit-background-clip: text;
+            animation: shimmer 4s linear infinite;
+        }
+    </style>
+</head>
+<body class="selection:bg-king-neonPink selection:text-white antialiased flex flex-col min-h-screen">
+
+    <!-- Global Navigation Header -->
+    <header class="border-b border-king-border bg-king-bg/95 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer group" onclick="app.goHome()">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-red-600 via-king-neonPink to-king-gold flex items-center justify-center font-black text-black text-xl shadow-lg glow-pink group-hover:scale-105 transition">
+                    👑
+                </div>
+                <div>
+                    <h1 class="font-black text-xl tracking-wider text-white flex items-center gap-2">
+                        생존왕 <span class="text-[10px] px-2 py-0.5 rounded bg-red-600/40 text-red-400 border border-red-500/50 font-mono font-bold">EXTREME HARDCORE</span>
+                    </h1>
+                    <p class="text-xs text-gray-400 hidden sm:block">10초 제한시간 & 극악 난이도 실시간 생존왕 시뮬레이터</p>
+                </div>
+            </div>
+
+            <!-- Header Control Buttons -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="app.openNicknameModal()" class="p-2 px-3 rounded-xl bg-king-card border border-king-gold/50 text-king-gold hover:border-king-gold transition flex items-center gap-1.5 text-xs font-mono">
+                    <i data-lucide="user" class="w-4 h-4 text-king-gold"></i>
+                    <span id="headerNickname" class="font-bold text-white">생존자</span>
+                    <i data-lucide="edit-3" class="w-3 h-3 text-gray-400"></i>
+                </button>
+
+                <button id="soundToggleBtn" onclick="app.toggleSound()" class="p-2 rounded-xl bg-king-card border border-king-border text-gray-300 hover:text-king-gold transition flex items-center gap-1.5 text-xs font-mono">
+                    <i data-lucide="volume-2" class="w-4 h-4 text-king-gold" id="soundIcon"></i>
+                    <span id="soundLabel" class="hidden md:inline">사운드 ON</span>
+                </button>
+
+                <button onclick="app.openStatsModal()" class="p-2 rounded-xl bg-king-card border border-king-border text-gray-300 hover:text-king-gold transition flex items-center gap-1.5 text-xs font-mono">
+                    <i data-lucide="trophy" class="w-4 h-4 text-king-gold"></i>
+                    <span class="hidden md:inline">랭킹 & 업적</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN APP DISPLAY CONTAINER -->
+    <main id="appContainer" class="flex-1 max-w-6xl w-full mx-auto px-4 py-6 md:py-8">
+        <!-- Injected dynamically via JS -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-king-border bg-king-bg py-6 text-center text-xs text-gray-500 font-mono">
+        <div class="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-3">
+            <p>© 2026 SURVIVAL KING EXTREME EDITION. All rights reserved.</p>
+            <p class="text-red-400 font-bold">⚠️ 문항 난이도 극악 패치 완료 | 10초 제한시간</p>
+        </div>
+    </footer>
+
+    <!-- Toast Notification Popup -->
+    <div id="toast" class="fixed bottom-6 right-6 px-4 py-3 rounded-xl bg-king-card border border-king-gold text-white text-sm shadow-2xl flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <i data-lucide="bell" class="w-4 h-4 text-king-gold"></i>
+        <span id="toastMsg">알림 메시지</span>
+    </div>
+
+    <!-- Nickname Settings Modal -->
+    <div id="nicknameModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-king-card border border-king-gold rounded-2xl max-w-sm w-full p-6 relative shadow-2xl">
+            <button onclick="app.closeNicknameModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                <i data-lucide="user-check" class="w-5 h-5 text-king-gold"></i> 닉네임 설정
+            </h3>
+            <p class="text-xs text-gray-400 mb-4">리더보드 및 생존 결과에 표시될 닉네임을 입력하세요.</p>
+            
+            <input type="text" id="nicknameInput" maxlength="12" placeholder="닉네임 입력 (최대 12자)" class="w-full px-4 py-3 rounded-xl bg-king-bg border border-king-border text-white text-sm mb-4 focus:outline-none focus:border-king-gold font-bold">
+            
+            <button onclick="app.saveNickname()" class="w-full py-3 rounded-xl bg-king-gold text-black font-bold text-sm hover:bg-amber-300 transition shadow-lg">
+                닉네임 저장하기
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats, Rank & Leaderboard Modal -->
+    <div id="statsModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-king-card border border-king-border rounded-2xl max-w-lg w-full p-6 relative shadow-2xl max-h-[90vh] flex flex-col">
+            <button onclick="app.closeStatsModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            
+            <div class="mb-4">
+                <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                    <i data-lucide="trophy" class="w-5 h-5 text-king-gold"></i> 실시간 생존왕 랭킹 & 업적
+                </h3>
+                <p class="text-xs text-gray-400">나의 생존 등급과 전국의 최상위 생존자 리더보드</p>
+            </div>
+
+            <!-- User Rank & Stats Overview -->
+            <div class="grid grid-cols-3 gap-2 mb-4 bg-king-bg p-3 rounded-xl border border-king-border text-center">
+                <div>
+                    <p class="text-[10px] text-gray-400">나의 랭크 티어</p>
+                    <p id="statRankTier" class="text-sm font-black text-king-gold font-mono">🥉 브론즈</p>
+                </div>
+                <div>
+                    <p class="text-[10px] text-gray-400">최고 생존 점수</p>
+                    <p id="statHighScore" class="text-sm font-black text-king-neonCyan font-mono">0 pts</p>
+                </div>
+                <div>
+                    <p class="text-[10px] text-gray-400">완주율 (도전)</p>
+                    <p id="statSurvivalRate" class="text-sm font-black text-king-neonGreen font-mono">0% (0회)</p>
+                </div>
+            </div>
+
+            <!-- Modal Tab Selector -->
+            <div class="flex border-b border-king-border mb-4 font-mono text-xs">
+                <button id="tabLeaderboardBtn" onclick="app.switchModalTab('leaderboard')" class="py-2 px-4 border-b-2 border-king-gold text-king-gold font-bold">
+                    🏆 전국의 생존자 랭킹 TOP 10
+                </button>
+                <button id="tabBadgesBtn" onclick="app.switchModalTab('badges')" class="py-2 px-4 border-b-2 border-transparent text-gray-400 hover:text-white font-bold">
+                    🎖️ 보유 훈장 (12종)
+                </button>
+            </div>
+
+            <!-- Modal Content Area -->
+            <div id="modalTabContent" class="flex-1 overflow-y-auto pr-1">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Web Audio API Sound Engine
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+            }
+
+            play(type) {
+                if (!this.enabled) return;
+                try {
+                    this.init();
+                    if (this.ctx.state === 'suspended') {
+                        this.ctx.resume();
+                    }
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    if (type === 'click') {
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(700, now);
+                        osc.frequency.exponentialRampToValueAtTime(350, now + 0.05);
+                        gain.gain.setValueAtTime(0.12, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                        osc.start(now);
+                        osc.stop(now + 0.05);
+                    } else if (type === 'correct') {
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(523.25, now);
+                        osc.frequency.setValueAtTime(659.25, now + 0.08);
+                        osc.frequency.setValueAtTime(783.99, now + 0.16);
+                        gain.gain.setValueAtTime(0.2, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                        osc.start(now);
+                        osc.stop(now + 0.3);
+                    } else if (type === 'damage') {
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(250, now);
+                        osc.frequency.linearRampToValueAtTime(60, now + 0.25);
+                        gain.gain.setValueAtTime(0.3, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                        osc.start(now);
+                        osc.stop(now + 0.25);
+                    } else if (type === 'gameover') {
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(350, now);
+                        osc.frequency.linearRampToValueAtTime(80, now + 0.7);
+                        gain.gain.setValueAtTime(0.35, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.7);
+                        osc.start(now);
+                        osc.stop(now + 0.7);
+                    } else if (type === 'victory') {
+                        const notes = [523.25, 659.25, 783.99, 1046.50];
+                        notes.forEach((freq, idx) => {
+                            const noteOsc = this.ctx.createOscillator();
+                            const noteGain = this.ctx.createGain();
+                            noteOsc.connect(noteGain);
+                            noteGain.connect(this.ctx.destination);
+                            noteOsc.type = 'sine';
+                            noteOsc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                            noteGain.gain.setValueAtTime(0.2, now + idx * 0.1);
+                            noteGain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.1 + 0.35);
+                            noteOsc.start(now + idx * 0.1);
+                            noteOsc.stop(now + idx * 0.1 + 0.35);
+                        });
+                    }
+                } catch(e) {
+                    console.error("Audio Engine Error:", e);
+                }
+            }
+        }
+
+        const audio = new SoundEngine();
+
+        // IMAGE ASSETS DIRECTLY LINKED FROM USER GITHUB REPO
+        const IMG_MAIN_HERO = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EB%A9%94%EC%9D%B8%20%EC%9D%B4%EB%AF%B8%EC%A7%80.png";
+        const IMG_SUBWAY = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EC%9B%94%EC%9A%94%EC%9D%BC%20%EC%B6%9C%EA%B7%BC%EA%B8%B8.png";
+        const IMG_INTROVERT = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EA%B7%B9I(%EB%82%B4%ED%96%A5%EC%9D%B8).jpg";
+        const IMG_BUDGET = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EC%9E%94%EA%B3%A0%2010%EB%A7%8C%EC%9B%90.png";
+        const IMG_ASYLUM = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EC%A0%95%EC%8B%A0%EB%B3%91%EC%9B%90%20%ED%83%88%EC%B6%9C.png";
+        const IMG_BOSS = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EB%B9%8C%EB%9F%B0%20%EC%83%81%EC%82%AC%20%EB%B0%91%EC%97%90%EC%84%9C%20%EC%82%B4%EC%95%84%EB%82%A8%EA%B8%B0.png";
+        const IMG_VOLCANO = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EB%B0%B1%EB%91%90%EC%82%B0%20%EB%8C%80%ED%8F%AD%EB%B0%9C%2072%EC%8B%9C%EA%B0%84.png";
+        const IMG_ZOMBIE = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/K-%EC%95%84%ED%8C%8C%ED%8A%B8%20%EC%A2%80%EB%B9%84%20%EC%95%84%ED%8F%AC%EC%B9%BC%EB%A6%BD%EC%8A%A4%20%EC%82%B4%EC%95%84%EB%82%A8%EA%B8%B0.png";
+        const IMG_SHARK = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EC%83%81%EC%96%B4%20%EC%B6%9C%EB%AA%B0%20%EC%88%98%EC%97%AD.png";
+        const IMG_AMAZON = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EC%A0%95%EA%B8%80%20%EC%86%8D%EC%97%90%EC%84%9C%20%EC%82%B4%EC%95%84%EB%82%A8%EA%B8%B0.png";
+        const IMG_KOREAN_GHOST = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%ED%95%9C%EA%B5%AD%EA%B3%A0%EC%A0%84%26%EB%8F%84%EC%8B%9C%EA%B4%B4%EB%8B%B4.png";
+        const IMG_HORROR_MOVIE = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EA%B3%B5%ED%8F%AC%EC%98%81%ED%99%94%20%EC%86%8D%20%EC%A3%BC%EC%9D%B8%EA%B3%B5.png";
+        const IMG_FAKE_NEWS = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EA%B0%80%EC%A7%9C%EB%89%B4%EC%8A%A4.png";
+
+        // EXTREME HARDCORE UPGRADED SURVIVAL TOPICS (HIGH DIFFICULTY QUESTIONNAIRES)
+        const SURVIVAL_TOPICS = [
+            // --- 🏢 1. 잔고 10만원 한달 생존 (EXTREME) ---
+            {
+                id: 'budget',
+                category: 'life',
+                title: '잔고 10만원 한달 생존',
+                badge: '최저가 연명왕 훈장',
+                difficulty: 4.8,
+                time: '10초/문항',
+                image: IMG_BUDGET,
+                desc: '영양 파괴, 기습 과태료, 인간관계 파탄의 3중고! 10초 내 정확한 가성비와 멘탈 보존 계산을 내리지 못하면 즉시 극빈자로 퇴출!',
+                icon: 'wallet',
+                badgeDesc: '극악의 칼로리 계산과 치밀한 예산 통제로 파산을 막아냄.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 필수 영양성분 대용량 장보기',
+                        narrative: '한 달 식비 예산 단 4만 원! 영양 불균형으로 패배하지 않으려면 어떤 전략을 선택해야 하는가?',
+                        options: [
+                            { text: '대용량 계란 30구, 두부 3모, 냉동 닭가슴살 2kg, 현미 5kg을 구매한다.', hp: +5, mental: +2, feedback: '단백질과 장기 탄수화물 완벽 수급!' },
+                            { text: '유통기한 임박 초특가 식빵 20봉지와 딸기잼을 대량 결제한다.', hp: -35, mental: -30, feedback: '당뇨 위험과 급격한 혈당 스파이크로 건강 저하!' },
+                            { text: '3만 원짜리 종합비타민 1병과 1만 원치 컵라면을 산다.', hp: -50, mental: -40, feedback: '비타민만으로 허기를 채울 수 없어 사흘 만에 쓰러짐!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 직장 부서장의 기습 회식 뿜빠이 요구',
+                        narrative: '부장님이 갑자기 삼겹살집으로 부르더니 "오늘 인당 3.5만 원씩 모으자!"라고 한다.',
+                        options: [
+                            { text: '"부장님, 죄송하지만 개인 건강 사정으로 음료수만 마시고 자리값 5천원만 내겠습니다."', hp: -5, mental: -10, feedback: '최소한의 예의를 지키며 3만 원 출혈 방어.' },
+                            { text: '분위기를 깨기 싫어 일단 먹고 다음 날 신용카드 현금서비스를 뚫는다.', hp: -40, mental: -60, feedback: '이율 19.9% 신용대출의 늪으로 진입!' },
+                            { text: '고기를 폭풍 흡입하고 계산할 때 화장실로 도망쳐 잠적한다.', hp: -20, mental: -70, feedback: '회사 내 양아치로 소문나 사회적 매장.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 보일러 파열 및 공과금 기습 가압류',
+                        narrative: '한겨울에 보일러가 터지고 연체된 가스비 28,000원이 자동 이체로 빠져나갔다!',
+                        options: [
+                            { text: '실내에서 패딩과 수면바지를 착용하고 핫팩 1개로 버틴다.', hp: -15, mental: -15, feedback: '추위를 견뎌내며 잔고 0원 방어.' },
+                            { text: '당장 사설 기사를 불러 7만 원에 출장 수리를 맡긴다.', hp: -70, mental: -60, feedback: '통장 잔고 마이너스! 피싱 위험 직면.' },
+                            { text: '전기난로를 24시간 풀가동한다.', hp: -30, mental: -50, feedback: '다음 달 누진세 폭탄 15만 원 확정.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 치통 발생과 치과 진료 갈림길',
+                        narrative: '⚠️ 어금니에 극심한 치통이 발생했다! 신경치료 비용 최소 8만 원 진단.',
+                        options: [
+                            { text: '약국에서 3,000원짜리 소염진통제만 사서 복용하며 견딘다.', hp: -25, mental: -30, feedback: '통증은 겨우 가라앉혔으나 식사가 힘들어짐.' },
+                            { text: '치과에서 바로 15만 원 크라운 치료를 받는다.', hp: -10, mental: -80, feedback: '치통은 나았으나 통장 잔고 0원으로 파산!' },
+                            { text: '민간요법으로 두통약 가루를 잇몸에 문지른다.', hp: -45, mental: -40, feedback: '잇몸 염증이 악화되어 얼굴이 부어오름.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 경조사 친한 친구의 기습 결혼식',
+                        narrative: '절친한 친구의 청첩장이 날아왔다. 축의금을 안 내면 인간관계 축출 위기!',
+                        options: [
+                            { text: '미안함을 정중히 전하고 모바일 축의금 3만 원만 보낸 후 식을 참여하지 않는다.', hp: 0, mental: -20, feedback: '식비와 뷔페 비용 부담 완화.' },
+                            { text: '결혼식장에 가서 축의금 1만 원을 내고 뷔페 4접시를 먹는다.', hp: -10, mental: -50, feedback: '친구에게 뒷뒷말을 들으며 멘탈 타격.' },
+                            { text: '축의금 10만 원을 카드로 긁고 고급 하객 룩을 대여한다.', hp: -20, mental: -80, feedback: '친구 의리는 지켰으나 본인은 구걸 신세.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 당근마켓 중고 거래 및 스미싱 사기꾼',
+                        narrative: '잔고 2,000원! 안 쓰는 카메라를 당근마켓에 올렸는데 선입금 택배 거래를 요구한다.',
+                        options: [
+                            { text: '택배 거래를 거절하고 무조건 집 앞 직거래 현금 수령만 고집한다.', hp: 0, mental: +10, feedback: '안전하게 현금 3만 원 즉시 확보!' },
+                            { text: '상대방이 보낸 안전결제 링크(가짜 사이트)로 접속해 인증한다.', hp: -60, mental: -90, feedback: '계좌 내 모든 잔고 및 개인정보 탈탈 털림!' },
+                            { text: '물건을 먼저 택배로 보내고 돈을 기다린다.', hp: -30, mental: -70, feedback: '물건만 먹튀 당하고 잠적당함.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 저혈당 뇌 마비 및 업무 실책 위기',
+                        narrative: '4일간 맹물과 밥 한 숟갈로 버티다 업무 중 어지럼증으로 기절 직전!',
+                        options: [
+                            { text: '탕비실의 믹스커피 설탕 알갱이와 소금을 미량 섭취해 혈당을 올린다.', hp: +10, mental: +10, feedback: '응급 혈당 충전으로 쇼크 회피!' },
+                            { text: '배달앱으로 2만 원짜리 포도당 영양제 주사를 주문한다.', hp: -10, mental: -70, feedback: '잔고 바닥으로 결제 승인 거절!' },
+                            { text: '참고 일하다가 과장님 서류 위에 기절해서 넘어진다.', hp: -50, mental: -50, feedback: '응급실 이송으로 병원비 12만 원 청구.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 월급날 당일 08:59 잔고 점검',
+                        narrative: '월급 입금 1분 전! 통장에 남은 돈은 단 350원. 출근길 자동이체 예약 대기 중!',
+                        options: [
+                            { text: '자동이체 출금 시간을 지연시키고 잔고 350원으로 버텨 입금을 확인한다.', hp: +10, mental: +30, feedback: '기적의 한 달 생존 완주 성공!' },
+                            { text: '신나서 카드 할부로 아침부터 편의점 털이를 한다.', hp: -20, mental: -50, feedback: '월급이 들어오자마자 연체 이자로 빠져나감.' },
+                            { text: '월급 들어온 기념으로 즉시 주식 레버리지 투자를 한다.', hp: -50, mental: -80, feedback: '하루 만에 월급의 50% 증발!' }
+                        ]
+                    }
+                ]
+            },
+
+            // --- 🏥 2. 의문의 정신병원 폐쇄 병동 탈출 (EXTREME) ---
+            {
+                id: 'asylum',
+                category: 'disaster',
+                title: '의문의 정신병원 폐쇄 병동 탈출',
+                badge: '폐쇄 병동 생환자 훈장',
+                difficulty: 4.9,
+                time: '10초/문항',
+                image: IMG_ASYLUM,
+                desc: '세뇌 약물, 무자비한 간수, 치명적 전기격리실! 10초 내 최적의 탈출 수칙을 적용하지 못하면 영구 마루타 피험자로 전락!',
+                icon: 'shield-alert',
+                badgeDesc: '사이코패스 병원장의 치명적 트릭을 간파하고 완벽 탈출.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 4점식 가죽 억제대와 주사기',
+                        narrative: '침대에 4점식 가죽 억제대로 강력 결박되어 있다. 간호사가 진정제 주사기를 들고 다가온다!',
+                        options: [
+                            { text: '숨을 크게 들여마셔 가슴과 관절을 부풀린 뒤 주사 투여 순간 힘을 빼 공간을 만든다.', hp: -5, mental: +5, feedback: '결박 끈 유격을 확보해 탈출 기회 생성!' },
+                            { text: '"나 멀쩡해! 이거 놓으라고!" 고함을 지르며 몸부림친다.', hp: -40, mental: -50, feedback: '강력 특수 진정제 2배 투여로 전신 마비!' },
+                            { text: '간호사의 손을 이빨로 물어뜯는다.', hp: -60, mental: -30, feedback: '전기 몽둥이 세례를 받고 기절.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 환각 유발 특수 신경제 투여',
+                        narrative: '의사가 빨간색과 파란색 알약 중 하나를 강제로 삼키라고 목구멍을 누른다!',
+                        options: [
+                            { text: '알약을 혀 뒤쪽 측면에 고정하고 물만 삼킨 후 감시가 없을 때 뱉는다.', hp: 0, mental: +10, feedback: '신경 마비제 투여 완벽 회피!' },
+                            { text: '빨간색 알약이 영양제 같아서 그냥 삼킨다.', hp: -50, mental: -60, feedback: '시각 및 청각 환각 증세 발동!' },
+                            { text: '알약을 씹어서 의사 얼굴에 뱉는다.', hp: -70, mental: -40, feedback: '독방 감금 및 독극물 재투여!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 광란의 중증 환자 집단 난동',
+                        narrative: '복도에서 광견병 증세를 보이는 환자 3명이 둔기를 들고 복도를 난장판으로 만들고 있다!',
+                        options: [
+                            { text: '벽에 바짝 붙어 시선을 바닥에 두고 그들의 무리에 포함된 척 걸어 통과한다.', hp: -10, mental: 0, feedback: '위장 행동으로 자극 없이 통과!' },
+                            { text: '소리를 지르며 맞서 싸우기 위해 의자를 집어든다.', hp: -60, mental: -40, feedback: '3명에게 집단 폭행을 당해 늑골 골절!' },
+                            { text: '가장 가까운 관물대 안에 숨어 문을 잠근다.', hp: -40, mental: -50, feedback: '관물대가 밖에서 잠겨 질식 위기!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 전기 자극 치료실의 감전 바닥',
+                        narrative: '⚠️ 복도 경보음과 함께 바닥에 고인 물로 220V 전류가 흐르기 시작한다!',
+                        options: [
+                            { text: '플라스틱 절연 재질의 배식 카트 위로 올라타 바퀴를 굴려 건넌다.', hp: -5, mental: +10, feedback: '전기 전도를 차단하여 무사히 통과!' },
+                            { text: '고무 실내화를 믿고 전속력으로 수면 위를 뛰어간다.', hp: -60, mental: -40, feedback: '고무 틈새로 물이 들어가 강력 감전 shock!' },
+                            { text: '천장 배수관을 손으로 잡고 매달려 이동한다.', hp: -40, mental: -30, feedback: '배수관이 무게를 못 이기고 파열되어 추락.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 중앙 암호 보안문 암호 해독',
+                        narrative: '탈출문 지문 인식기와 키패드가 보인다. 경비원 발소리가 5초 앞으로 다가온다!',
+                        options: [
+                            { text: '키패드 중 지문 기름때가 가장 많이 묻은 4개 자리를 조합해 누른다.', hp: 0, mental: +10, feedback: '1초 전 문이 열리며 탈출 성공!' },
+                            { text: '소화기로 암호 키패드를 미친 듯이 들이받는다.', hp: -30, mental: -50, feedback: '경보음이 전체 병원에 울려 경비대 집결.' },
+                            { text: '경비원에게 자비를 구하며 무릎을 꿇는다.', hp: -80, mental: -80, feedback: '지하 뇌수술실로 즉시 이송.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 세뇌 치료실 마취가스 분사',
+                        narrative: '밀폐된 통로에서 노란색 마취가스가 빠르게 뿜어져 나온다!',
+                        options: [
+                            { text: '소독용 알코올 솜을 옷에 적셔 코에 대고 가장 낮은 자세로 기어간다.', hp: -10, mental: +5, feedback: '마취 성분을 중화 및 기체 흡입 최소화!' },
+                            { text: '숨을 꾹 참은 채 두 눈을 감고 서서 전속력으로 달린다.', hp: -50, mental: -40, feedback: '10m 못 가서 산소 결핍으로 가스 흡입 후 기절.' },
+                            { text: '비상벨을 눌러 환기장치가 작동하길 기다린다.', hp: -40, mental: -50, feedback: '비상벨에서 가스가 더 많이 분사됨.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 친절한 원장의 정체와 트릭',
+                        narrative: '원장이 온화한 미소로 인스턴트 커피를 내민다. "고생했어요, 차로 정문까지 모셔다 줄게요."',
+                        options: [
+                            { text: '원장의 가운 주머니 속 주사기 형태를 포착하고 핫커피를 원장 얼굴에 던진다.', hp: -10, mental: +15, feedback: '마지막 속임수를 파악하고 제압 성공!' },
+                            { text: '눈물을 흘리며 감격하여 커피를 마시고 차에 탄다.', hp: -90, mental: -90, feedback: '장기 적출 수술대 위에서 눈을 뜸.' },
+                            { text: '원장 앞에서 살려달라고 빌며 돈을 제시한다.', hp: -50, mental: -60, feedback: '경비원들을 불러 강제 진정제 투여.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 3m 철조망 담장과 도베르만 맹견',
+                        narrative: '외곽 담장 도착! 전류가 흐르는 철조망과 밑에서 도베르만 2마리가 입을 벌리고 있다.',
+                        options: [
+                            { text: '소화기 분말을 맹견 눈에 분사해 시야를 뺏고, 나무 경비 초소를 타고 철조망을 넘는다.', hp: -10, mental: +20, feedback: '축하합니다! 악마의 병원에서 완전 생환 성공!' },
+                            { text: '맹견에게 고기를 던져주고 정문으로 뛰어간 다.', hp: -70, mental: -60, feedback: '맹견이 고기를 마다하고 다리를 물어뜯음.' },
+                            { text: '맨손으로 전기 철조망을 잡고 뛰어넘는다.', hp: -80, mental: -50, feedback: '감전과 함께 철조망에 매달려 사망.' }
+                        ]
+                    }
+                ]
+            },
+
+            // --- 🏢 3. 빌런 상사 밑에서 살아남기 (EXTREME) ---
+            {
+                id: 'boss',
+                category: 'life',
+                title: '빌런 상사 밑에서 살아남기',
+                badge: '오피스 멘탈 방패 훈장',
+                difficulty: 4.5,
+                time: '10초/문항',
+                image: IMG_BOSS,
+                desc: '가스라이팅, 공적 횡령, 퇴근 전 기습 폭격의 달인! 10초 내에 법적/사내 규정에 맞는 완벽한 대처를 못하면 시말서와 대기발령!',
+                icon: 'briefcase',
+                badgeDesc: '사이코패스 직장 상사의 악행을 완벽히 수집하여 역관광 성공.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 금요일 17:58분 기습 300페이지 보고서 던지기',
+                        narrative: '퇴근 2분 전. 부장님이 서류를 책상에 탕 소리 나게 던진다. "월요일 9시 임원 회의 자료다."',
+                        options: [
+                            { text: '"부장님, 핵심 요약 3페이지를 먼저 작성해 내일 오전에 메일로 공유해 드리겠습니다."', hp: -5, mental: +5, feedback: '업무 가능 범위를 정확히 명시해 협상 성공!' },
+                            { text: '"저 오늘 약속 있는데요? 노동청에 신고하겠습니다!" 하고 소리친다.', hp: -40, mental: -50, feedback: '월요일 아침 징계위원회 소환 및 사내 따돌림!' },
+                            { text: '아무 말 없이 서류를 받고 주말 내내 밤을 새운다.', hp: -40, mental: -30, feedback: '주말 멘탈 파괴 및 과로로 건강 악화.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 내가 밤새 만든 기획안 공적 100% 가로채기',
+                        narrative: '임원 보고 자리. 부장님이 당신의 기획안 제목만 바꿔 본인 이름으로 발표한다!',
+                        options: [
+                            { text: '"부장님께서 제시해주신 방향 덕에 제가 실무 세부 데이터를 완성할 수 있었습니다"라며 보충 설명.', hp: 0, mental: +10, feedback: '임원들에게 실체적 작성자가 나임을 정중히 각인!' },
+                            { text: '발표 중간에 일어나 "거짓말입니다! 저 사람이 훔쳤습니다!"라고 고함을 지른다.', hp: -50, mental: -60, feedback: '임원들에게 태도 불량으로 찍혀 대기발령.' },
+                            { text: '억울해서 회의실 구석에서 눈물을 흘린다.', hp: -20, mental: -50, feedback: '능력 부족 및 유약한 사원으로 평가됨.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 일요일 새벽 2시 개인 카톡 괴롭힘',
+                        narrative: '일요일 새벽 2시. "자나? 내일 발표할PPT 색상이 마음에 안 드는데 지금 수정해."',
+                        options: [
+                            { text: '카톡 알림 차단 상태를 유지하고, 다음 날 출근 30분 전에 정중히 수정본을 보낸다.', hp: 0, mental: +10, feedback: '사생활 방어 및 업무 처리 완벽!' },
+                            { text: '새벽 2시에 일어나 울면서 PPT 템플릿 전체를 재작성한다.', hp: -40, mental: -40, feedback: '월요일 지각 및 피로 누적으로 업무 빵구.' },
+                            { text: '카톡을 읽고 "새벽에 미쳤습니까?"라고 답장한다.', hp: -30, mental: -60, feedback: '월요일부터 보복성 업무 폭탄 수령.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 부서원 전체 공개 가스라이팅 폭격',
+                        narrative: '⚠️ 부장님이 부서원 전체를 세워두고 "너희 같은 쓰레기들은 다른 회사 가면 바로 해고야!"라고 고함을 친다.',
+                        options: [
+                            { text: '주머니 속 스마트폰 녹음기를 켜고, 표정 변동 없이 발언 일시와 단어를 메모한다.', hp: -10, mental: -10, feedback: '노동청 제출용 핵심 고소 증거 확보!' },
+                            { text: '"맞습니다, 저희가 부족합니다"라며 굽신거린다.', hp: -20, mental: -40, feedback: '자존감 완벽 붕괴 및 자아 상실.' },
+                            { text: '부장님 얼굴에 서류 봉투를 던지고 회사 밖으로 나간다.', hp: -60, mental: -70, feedback: '무단이탈 및 사내 폭행으로 즉시 해고.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 개인 심름 및 아들 과제 대리 지시',
+                        narrative: '"O사원, 내 아들 초등학교 과제 독후감 좀 대신 써와. 컴퓨터 잘하잖아."',
+                        options: [
+                            { text: '"부장님, 현재 진행 중인 A프로젝트 마감이 급해 권한 밖의 일은 수행이 어렵습니다."', hp: 0, mental: +5, feedback: '업무 우선순위를 핑계로 사적 지시 거절!' },
+                            { text: '아들 독후감을 정성껏 작성해 5장 올려바친다.', hp: -20, mental: -30, feedback: '앞으로 부장 집안 행사 전담 노예 확정.' },
+                            { text: '초등학생 수준으로 욕설을 써서 제출한다.', hp: -40, mental: -50, feedback: '부장님에게 발각되어 극심한 보복 당함.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 부장 자신의 치명적 결제 실수 덮어씌우기',
+                        narrative: '부장님이 잘못 결제해 500만 원 손실 발생! "O사원이 서류 잘못 올렸잖아!"라며 전가한다.',
+                        options: [
+                            { text: '부장님의 최종 결제 승인 도인 및 메일 발송 히스토리 결제선을 캡처해 보관한다.', hp: 0, mental: +10, feedback: '감사팀 조사 시 완벽한 방어 무기 확보!' },
+                            { text: '억울하지만 내 과실이라고 인정하며 사과문을 쓴다.', hp: -50, mental: -70, feedback: '500만 원 손해배상 청구 소송 당함!' },
+                            { text: '사내 게시판에 부장님 욕을 익명으로 올린다.', hp: -30, mental: -40, feedback: 'IP 추적으로 발각되어 명예훼손 고소당함.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 답정너 회식과 강제 음주 압박',
+                        narrative: '"오늘 술 안 마시는 놈은 내 부서원도 아니야! 독주 5잔 연속으로 마셔!"',
+                        options: [
+                            { text: '위장약 약봉지를 보여주며 "위궤양 치료제 복용 중이라 알코올 쇼크 위험이 있습니다" 양해구함.', hp: -5, mental: +5, feedback: '의학적 사유를 대어 음주 강요 회피!' },
+                            { text: '주는 대로 5잔 연속 꺾어 마신다.', hp: -60, mental: -30, feedback: '급성 알코올 중독으로 응급실 이송.' },
+                            { text: '술잔을 바닥에 쏟아버린다.', hp: -35, mental: -50, feedback: '회식판이 난장판이 되며 부장과 육탄전.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 연말 인사평가 C등급 통보 및 협상',
+                        narrative: '연말 평가 면담. 부장님이 C등급을 내밀며 "자네는 성과가 없어"라며 비웃는다.',
+                        options: [
+                            { text: '1년간의 매출 기여도 수치와 캡처된 직장 내 괴롭힘 녹음 파일 목록을 내민다.', hp: +10, mental: +30, feedback: '부장님 당황! 평가 S등급으로 정정 및 사과 수령!' },
+                            { text: '울면서 한번만 봐달라고 손이 발이 되도록 빈다.', hp: -20, mental: -50, feedback: 'C등급 확정 및 연봉 10% 삭감.' },
+                            { text: '책상을 뒤엎고 그 자리에서 사직서를 던진다.', hp: -10, mental: -30, feedback: '무직 상태로 전락하여 경제적 위기 진입.' }
+                        ]
+                    }
+                ]
+            },
+
+            // --- 🌋 4. 백두산 대폭발 72시간 (EXTREME) ---
+            {
+                id: 'volcano',
+                category: 'disaster',
+                title: '백두산 대폭발 72시간',
+                badge: '화산재 방재 생환자 훈장',
+                difficulty: 5.0,
+                time: '10초/문항',
+                image: IMG_VOLCANO,
+                desc: 'VEI 7급 거대 분화! 날카로운 유리 입자 화산재, 라하르(화산토석류), 독가스! 10초 내 정확한 재난 지식을 적용하라.',
+                icon: 'flame',
+                badgeDesc: '유리 입자 화산재와 토석류의 위협 속에서 매뉴얼 준수로 살아남음.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 유리 입자 화산재 폭풍 폭격',
+                        narrative: '하늘이 검게 물들며 날카로운 유리 파편 성분의 화산재가 폭우처럼 쏟아진다!',
+                        options: [
+                            { text: 'KF94 마스크에 물을 살짝 적셔 착용하고 수영 고글로 안구를 완전 봉쇄한다.', hp: +5, mental: +5, feedback: '폐 손상 및 안구 상처 완벽 방어!' },
+                            { text: '일반 우산을 쓰고 평소처럼 집으로 달린다.', hp: -50, mental: -40, feedback: '유리 가루 화산재가 폐에 들어가 마비 발생!' },
+                            { text: '수건으로 입만 가리고 하늘을 올려다본다.', hp: -40, mental: -30, feedback: '안구에 화산재가 들어가 실명 위기.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 화산재 무게로 인한 지붕 붕괴 위험',
+                        narrative: '지붕 위로 젖은 화산재가 30cm 이상 쌓이며 천장에서 "콰직" 소리가 난다!',
+                        options: [
+                            { text: '안전모, 마스크, 고글을 갖추고 빗자루로 지붕 화산재를 쓸어내린다.', hp: -10, mental: +10, feedback: '지붕 붕괴를 막고 거주지 확보!' },
+                            { text: '집 안에서 안 무너지길 기도하며 거실에 누워 있는다.', hp: -70, mental: -60, feedback: '지붕이 완파되며 잔해에 매몰됨!' },
+                            { text: '지붕 위로 올라가 물을 뿌려 화산재를 씻어낸다.', hp: -60, mental: -40, feedback: '화산재가 물을 흡수해 무게가 2배로 무거워져 즉시 붕괴!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 화산성 토석류(라하르) 밀려옴',
+                        narrative: '산곡 저지대에서 시속 80km의 뜨거운 진흙 폭풍 라하르가 밀려온다!',
+                        options: [
+                            { text: '계곡과 하천 도로를 버리고 직각 방향의 높은 암반 지대로 대피한다.', hp: 0, mental: +10, feedback: '토석류 이동 경로를 벗어나 생존!' },
+                            { text: '차를 타고 하천을 따라 빠르게 아래로 달린다.', hp: -80, mental: -60, feedback: '시속 80km 라하르에 차째 휩쓸려 매몰!' },
+                            { text: '튼튼해 보이는 콘크리트 다리 밑으로 들어간다.', hp: -90, mental: -70, feedback: '다리가 붕괴되며 토사 매몰.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 충격파와 유독가스(이산화황) 유입',
+                        narrative: '⚠️ "쿵!" 거대한 충격파와 함께 달걀 썩는 냄새의 유독 가스가 밀려온다!',
+                        options: [
+                            { text: '물과 소다가 든 젖은 수건으로 코와 입을 막고 산 정상이 아닌 고지대 바람 등지고 이동.', hp: -10, mental: +5, feedback: '유독가스 질식 위기 회피!' },
+                            { text: '바닥에 납작 엎드려 가스가 지나가길 기다린다.', hp: -80, mental: -70, feedback: '이산화황은 공기보다 무거워 바닥에 침전! 즉시 질식!' },
+                            { text: '숨을 참고 인근 지하 지하철역으로 도망친다.', hp: -70, mental: -80, feedback: '지하 공간에 유독가스가 가득 차 사망.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 아스팔트 화산재로 인한 차량 실동',
+                        narrative: '대피 차를 몰고 가던 중 화산재가 에어클리너 필터를 막아 흡기 엔진 소리가 이상하다.',
+                        options: [
+                            { text: '시속 20km 이하로 저속 운행하며 에어필터를 주기적으로 털어준다.', hp: 0, mental: +5, feedback: '엔진 과열을 막고 대피 지속!' },
+                            { text: '빨리 빠져나가려고 풀 악셀을 밟아 100km로 달린다.', hp: -60, mental: -40, feedback: '엔진 내부로 화산재가 들어가 시동 완전 정지!' },
+                            { text: '차를 길 한가운데 버리고 걸어간다.', hp: -40, mental: -30, feedback: '화산재 폭풍 속에 노출되어 호흡기 파괴.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 단수 및 수돗물 중금속 오염',
+                        narrative: '수돗물에서 잿빛 물이 나온다. 목이 너무 타고 갈증이 극에 달한다.',
+                        options: [
+                            { text: '밀봉된 캔 음료나 보관된 생수만 마시고 정수기 물도 거른다.', hp: 0, mental: +5, feedback: '중금속 및 화산재 중독 완전 차단!' },
+                            { text: '수돗물을 끓여서 마신다.', hp: -60, mental: -50, feedback: '끓여도 용해된 중금속과 수은은 사라지지 않음! 중독!' },
+                            { text: '위층 수세식 변기 수조 물을 끓여 마신다.', hp: -40, mental: -40, feedback: '배탈 및 세균 감염 발생.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 암흑 상황 속 기습 고압전선 단선',
+                        narrative: '화산재 가시거리 30cm 암흑 속! 발밑에서 고압 전선이 끊어져 정전기가 튄다.',
+                        options: [
+                            { text: '두 발을 붙인 채 깡충깡충 뛰거나 발을 바닥에서 떼지 않고 비비며 조금씩 이동.', hp: -5, mental: +10, feedback: '보폭 전압에 의한 감전 차단 성공!' },
+                            { text: '전선을 향해 전속력으로 보폭을 크게 벌려 뛰어넘는다.', hp: -80, mental: -60, feedback: '보폭 전압차로 인해 강력 감전 사망!' },
+                            { text: '손전등으로 전선을 치워가며 간다.', hp: -70, mental: -50, feedback: '손전등 재질을 타고 전류가 흘러 감전.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 남해안 정부 구호 수송선 최종 탑승',
+                        narrative: '항구 도착! 구조선 탑승 인원 제한으로 밀치기 난장판이 벌어졌다.',
+                        options: [
+                            { text: '질서 유지 요원의 지시에 따라 방역 세척 후 수송선 내부로 착석한다.', hp: +10, mental: +20, feedback: '축하합니다! 백두산 대폭발 참사 완벽 생환!' },
+                            { text: '배에 먼저 오르려고 사람들을 밀치고 난간을 넘는다.', hp: -60, mental: -50, feedback: '해경 경고 사격 및 바다 추락.' },
+                            { text: '차량에 남아 아껴둔 짐을 챙기려 돌아간다.', hp: -50, mental: -40, feedback: '수송선이 떠나버려 항구에 고립.' }
+                        ]
+                    }
+                ]
+            },
+
+            // --- 🦁 5. K-아파트 좀비 아포칼립스 (EXTREME) ---
+            {
+                id: 'zombie',
+                category: 'disaster',
+                title: 'K-아파트 좀비 아포칼립스',
+                badge: '아파트 수호 대장 훈장',
+                difficulty: 4.9,
+                time: '10초/문항',
+                image: IMG_ZOMBIE,
+                desc: '100m를 11초에 주파하는 K-좀비 창궐! 소리, 청각, 냄새에 민감한 특성을 파악하고 아파트 구조를 활용해 탈출하라.',
+                icon: 'skull',
+                badgeDesc: '미친 속도의 K-좀비 군단을 지혜로 물리치고 생존자 캠프 도달.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 복도 디지털 도어락 부수는 소리',
+                        narrative: '복도에서 좀비 5마리가 디지털 도어락을 머리로 들이받고 있다! 문이 일그러진다.',
+                        options: [
+                            { text: '현관문을 오목하게 잠그고 냉장고와 장롱을 끌어와 이중 봉쇄 후 소음을 멈춘다.', hp: +2, mental: +5, feedback: '물리적 요새화 및 어그로 차단 성공!' },
+                            { text: '프라이팬과 칼을 들고 복도로 나가 기습한다.', hp: -80, mental: -60, feedback: '100m 11초 좀비 5마리에게 둘러싸여 물림!' },
+                            { text: '베란다로 나가 살려달라고 목청껏 소리친다.', hp: -40, mental: -50, feedback: '아파트 전체 좀비들의 표적이 됨.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 단수 고갈 및 식수 확보 매뉴얼',
+                        narrative: '배관에서 물이 쫄쫄 나오기 시작한다. 3분 뒤 완벽 단수 예정!',
+                        options: [
+                            { text: '욕조, 김치통, 냄비뿐만 아니라 보일러 퇴수 밸브 물까지 챙긴다.', hp: +5, mental: +5, feedback: '2주 치 음용수 확보 완료!' },
+                            { text: '냉장고 속 맥주 캔 10개만 챙긴다.', hp: -30, mental: -30, feedback: '알코올로 인한 탈수 증세 촉진.' },
+                            { text: '변기 물통 수조 물을 그대로 마신다.', hp: -40, mental: -40, feedback: '세균성 이질로 폭풍 설사 발생.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 현관 완파와 베란다 경량칸막이 탈출',
+                        narrative: '현관문이 부서졌다! 옆집으로 탈출해야 한다.',
+                        options: [
+                            { text: '베란다 비상 경량칸막이 석고보드를 발로 강하게 차서 뚫고 옆집 이동.', hp: 0, mental: +5, feedback: '아파트 비상 탈출 구조 정석 활용!' },
+                            { text: '12층 베란다 난간을 타고 옆집 창문으로 기어간다.', hp: -70, mental: -60, feedback: '발이 미끄러져 추락할 뻔함!' },
+                            { text: '현관문 틈새로 소화기를 분사하며 돌파한다.', hp: -60, mental: -50, feedback: '분사력이 약해 좀비에게 잡힘.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 좁은 비상계단 감염자와의 기습 충돌',
+                        narrative: '⚠️ 계단 모퉁이를 돌자마자 감염자 1마리가 가방을 낚아채 목덜미를 노린다!',
+                        options: [
+                            { text: '가방 끈을 즉시 칼로 잘라 버리고 계단 난간 밑으로 좀비를 밀어버린다.', hp: -10, mental: +5, feedback: '신속한 미련 포기로 물리적 제압 성공!' },
+                            { text: '가방을 지키려고 좀비와 멱살잡이를 한다.', hp: -60, mental: -50, feedback: '어깨와 목덜미를 깊숙이 물림!' },
+                            { text: '계단 바닥에 누워 죽은 척한다.', hp: -90, mental: -80, feedback: '좀비가 죽은 척하는 몸을 갈기갈기 찢음.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 지하 주차장 스텔스 이동',
+                        narrative: '지하 주차장에 좀비 30마리가 상주하고 있다. 차량까지 가야 한다.',
+                        options: [
+                            { text: '스마트키 원격 경보음으로 가장 먼 곳의 차를 울려 유인 후 시계 방향 우회.', hp: 0, mental: +10, feedback: '교란 작전 완벽 성공!' },
+                            { text: '숨을 참고 주차장 중앙으로 뛰어간다.', hp: -60, mental: -50, feedback: '발소리를 듣고 30마리가 일제히 돌진!' },
+                            { text: '지하 주차장 조명을 모두 켜버린다.', hp: -50, mental: -60, feedback: '시각 자극으로 전원 표적화.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 차 안으로 몰려드는 좀비 떼와 시동',
+                        narrative: '차에 탔으나 좀비들이 차량 유리창에 머리를 박으며 깨뜨리려 한다!',
+                        options: [
+                            { text: '전조등을 끄고 경적을 절대 누르지 않은 채 저속으로 천천히 밀어내며 빠져나간다.', hp: -10, mental: +10, feedback: '시각 자극을 최소화하여 조용히 탈출!' },
+                            { text: '경적을 미친 듯이 울리며 풀악셀을 밟는다.', hp: -50, mental: -40, feedback: '차량 앞유리에 좀비 시체들이 엉켜 시야 완전 봉쇄!' },
+                            { text: '차 문을 열고 망치로 머리를 찍는다.', hp: -70, mental: -60, feedback: '문 틈으로 손들이 밀고 들어와 끌려나감.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 도심 봉쇄 도로 진입 선택',
+                        narrative: '도로로 나왔다. 1번 국도(내륙)와 고속도로 진입로 중 어디로 가야 하는가?',
+                        options: [
+                            { text: '버려진 차가 적고 우회로가 많은 외곽 지방 국도를 선택한다.', hp: 0, mental: +5, feedback: '정체 병목 구간 회피 성공!' },
+                            { text: '가장 빠른 왕복 8차선 경부고속도로로 들어간다.', hp: -60, mental: -50, feedback: '버려진 차량 수백 대에 갇혀 격리됨!' },
+                            { text: '도심 한가운데 대형 마트로 차를 튼다.', hp: -50, mental: -40, feedback: '마탄의 좀비 구역에 진입하여 고립.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 격리 구역 국방부 검문소 통과',
+                        narrative: '생존자 격리 캠프 방어선 도착! 군인이 총을 겨누며 차에서 내리라고 한다.',
+                        options: [
+                            { text: '두 손을 머리 위로 올리고 조명이 밝은 곳으로 천천히 걸어 나가 감염 여부 시각 검사에 응한다.', hp: +10, mental: +20, feedback: '축하합니다! K-좀비 아포칼립스 완벽 생환!' },
+                            { text: '살려달라고 비명을 지르며 군인을 향해 전속력으로 뛰어간 다.', hp: -90, mental: -90, feedback: '감염자로 오인받아 사격당함.' },
+                            { text: '차 안에서 안 내리고 버틴다.', hp: -40, mental: -30, feedback: '최루탄 투척 및 강제 제압.' }
+                        ]
+                    }
+                ]
+            },
+
+            // --- 🦈 6. 상어 출몰 수역 생존왕 (EXTREME) ---
+            {
+                id: 'shark',
+                category: 'disaster',
+                title: '상어 출몰 수역 생존왕',
+                badge: '해양 포식자 기적 생환자 훈장',
+                difficulty: 4.8,
+                time: '10초/문항',
+                image: IMG_SHARK,
+                desc: '3m 뱀상어와 백상아리 수역! 물보라, 피 냄새, 눈동자 시선 처리 수칙을 모르면 즉시 해양 포식자의 먹잇감으로 전락!',
+                icon: 'waves',
+                badgeDesc: '상어의 생태 특성을 이용해 급소를 공격하고 체온을 지켜 생환.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 3m 뱀상어의 서클링 접근',
+                        narrative: '15m 앞에서 지느러미가 당신을 중심으로 원을 그리며 조여온다!',
+                        options: [
+                            { text: '물보라를 일으키지 않고 수직 자세를 유지하며 상어와 지속적으로 시선을 맞춘다.', hp: 0, mental: +5, feedback: '약한 먹잇감이 아님을 인식시켜 공격 유예!' },
+                            { text: '비명을 지르며 팔다리를 첨벙거리며 자유형으로 달아난다.', hp: -70, mental: -60, feedback: '물보라 소리에 도망치는 먹잇감으로 규정! 즉시 습격!' },
+                            { text: '물속으로 숨을 참고 죽은 척 가라앉는다.', hp: -50, mental: -40, feedback: '상어가 사체인 줄 알고 뜯어먹으려 다가옴.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 상어의 주둥이 기습 바디 뱅킹',
+                        narrative: '상어가 옆구리를 단단한 주둥이로 툭 부딪히며 간을 본다!',
+                        options: [
+                            { text: '주먹이나 Kamera 등 단단한 도구로 상어의 눈이나 아가미를 강하게 타격한다.', hp: -10, mental: +10, feedback: '급소 타격으로 상어가 급선회하여 물러섬!' },
+                            { text: '상어의 등지느러미를 잡고 등에 올라탄다.', hp: -80, mental: -70, feedback: '상어의 몸부림에 허벅지 살점 파열!' },
+                            { text: '배를 보이고 웅크린다.', hp: -60, mental: -50, feedback: '연약한 배 부위를 노리고 물어뜯김.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 저체온증과 HELP 자세 적용',
+                        narrative: '수온 16도. 온몸에 마비가 오고 떨림이 멈추지 않는다.',
+                        options: [
+                            { text: '무릎을 가슴으로 끌어당기고 양팔로 감싸는 HELP 자세를 취한다.', hp: +5, mental: +5, feedback: '체온 손실을 50% 이상 감소시킴!' },
+                            { text: '체온을 올리기 위해 온 힘을 다해 수영을 한다.', hp: -40, mental: -30, feedback: '열 손실이 급격해져 저체온증 쇼크 사망!' },
+                            { text: '바닷물을 마셔서 위장을 채운다.', hp: -60, mental: -50, feedback: '신장 파괴 및 탈수 가속화.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 맹독 상자해파리 떼 유입',
+                        narrative: '⚠️ 투명한 맹독 상자해파리 촉수 수십 개가 다리에 닿으려 한다!',
+                        options: [
+                            { text: '촉수를 절대 손으로 만지지 말고, 닿은 부위에 바닷물을 흘려보내며 부드럽게 이탈.', hp: -5, mental: +5, feedback: '자극 없이 해파리 구역 통과!' },
+                            { text: '손으로 해파리 촉수를 잡아 떼어낸다.', hp: -70, mental: -60, feedback: '손바닥에 독 침 세례로 호흡 마비 발생!' },
+                            { text: '상처 부위에 생수를 부어 씻어낸다.', hp: -60, mental: -50, feedback: '생수가 자극하여 자포가 일제히 터짐!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 다리 찰과상 피 냄새 유출',
+                        narrative: '다리 상처에서 붉은 피가 바닷속으로 퍼지기 시작한다!',
+                        options: [
+                            { text: '압박 붕대나 옷가지로 상처 상단부를 세게 묶어 피 유출을 최소화한다.', hp: -10, mental: +5, feedback: '후각 어그로 최소화 성공!' },
+                            { text: '피를 씻어내려고 다리를 물속에서 흔든다.', hp: -50, mental: -40, feedback: '피 냄새가 넓게 확산되어 다른 상어 유인.' },
+                            { text: '피를 입으로 빨아 삼킨다.', hp: -30, mental: -30, feedback: '구토 및 수중 오염.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 탈수로 인한 탈영 및 착각 환각',
+                        narrative: '수평선에 시원한 코카콜라 자판기가 떠 있는 환각이 보인다!',
+                        options: [
+                            { text: '눈을 감고 혀를 입천장에 대며 정신을 가다듬고 구조대만 기다린다.', hp: 0, mental: +10, feedback: '환각을 극복하고 체력 보존!' },
+                            { text: '자판기를 향해 전속력으로 헤엄쳐 간다.', hp: -40, mental: -30, feedback: '허공에 체력을 완전히 고갈시킴.' },
+                            { text: '바닷물로 목을 축인다.', hp: -50, mental: -40, feedback: '환각 증세 심화 및 기절.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 해양 경찰 탐색 헬기 조명 포착',
+                        narrative: '밤하늘에 탐색 헬기의 탐조등 빛이 수면을 훑고 지나간다!',
+                        options: [
+                            { text: '구명조끼의 신호용 호루라기를 지속적으로 불고 거울로 빛을 반사한다.', hp: 0, mental: +10, feedback: '헬기가 반사광과 소리를 포착!' },
+                            { text: '물속에서 발차기만 세게 한다.', hp: -30, mental: -20, feedback: '공중에서 전혀 보이지 않음.' },
+                            { text: '물 위에 누워 눈을 감는다.', hp: -20, mental: -30, feedback: '구조 시기를 놓치고 지나침.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 구조대원의 구조 고리(Rescue Sling) 인계',
+                        narrative: '구조대원이 바다로 뛰어내려 고리를 건넨다! 인양 직전 순간!',
+                        options: [
+                            { text: '고리를 겨드랑이 밑으로 넣고 가슴 고정을 확인한 뒤 양팔을 모아 신호를 준다.', hp: +10, mental: +20, feedback: '축하합니다! 상어 수역에서 기적적 생환 성공!' },
+                            { text: '구조대원의 목을 끌어안고 몸부림친다.', hp: -50, mental: -40, feedback: '함께 바다 깊숙이 빠져 인양 지연.' },
+                            { text: '고리를 다리에 걸고 올라가려 한다.', hp: -40, mental: -30, feedback: '공중에서 거꾸로 뒤집혀 추락 위험.' }
+                        ]
+                    }
+                ]
+            },
+
+            // --- 🏢 7. 월요일 출근길 지옥철 (EXTREME) ---
+            {
+                id: 'subway',
+                category: 'life',
+                title: '월요일 출근길 지옥철 생존왕',
+                badge: '지옥철 생환자 훈장',
+                difficulty: 4.2,
+                time: '10초/문항',
+                image: IMG_SUBWAY,
+                desc: '밀도 320% 신도림역! 압사 압박, 에어팟 분실, 옷 찢어짐, 과호흡 증후군 속에서 무사히 사무실 카드 태그를 완료하라!',
+                icon: 'train-front',
+                badgeDesc: '지옥철의 질식할 것 같은 압박을 이겨내고 8시 59분 출근 성공.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 승강장 압사급 300% 밀도 인파',
+                        narrative: '열차 문이 열리자마자 뒤에서 거대한 인간 파도가 흉부를 거세게 밀어붙인다!',
+                        options: [
+                            { text: '무릎을 살짝 굽혀 하체 중심을 잡고 인파 흐름에 유연하게 상체를 맡긴다.', hp: +2, mental: +3, feedback: '최소한의 충격으로 수용됨!' },
+                            { text: '악으로 힘으로 거세게 밀어붙이며 맞서 싸운다.', hp: -40, mental: -30, feedback: '갈비뼈 미세 골절 타격!' },
+                            { text: '뒤로 도망치려고 거꾸로 돌아선다.', hp: -30, mental: -50, feedback: '인파에 짓눌려 발이 밟힘.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 가슴 흉부 압박과 호흡 곤란 위기',
+                        narrative: '사방에서 사람들의 어깨가 가슴을 짓눌러 숨이 안 쉬어진다!',
+                        options: [
+                            { text: '양팔을 가슴 앞에 X자로 모아 공간을 만들고 얕고 빠른 호흡을 피한다.', hp: +3, mental: +2, feedback: '숨골 공간 확보 성공!' },
+                            { text: '백팩을 등에 멘 채 폰을 보려 상체를 틀어쥔다.', hp: -40, mental: -30, feedback: '거북목 통증 및 주변 사람들의 야유!' },
+                            { text: '숨을 꾹 참는다.', hp: -30, mental: -40, feedback: '산소 부족으로 어지럼증 발생.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 한쪽 에어팟 낙하 대참사',
+                        narrative: '옆 사람 팔꿈치에 맞아 30만원짜리 에어팟이 바닥으로 떨어진다!',
+                        options: [
+                            { text: '발등을 살짝 내밀어 받아 충격을 완화하고 내릴 때 회수하기로 판단한다.', hp: -5, mental: +5, feedback: '파손 방지 및 위험 회피!' },
+                            { text: '바닥을 보려고 상체를 90도로 숙여 줍는다.', hp: -60, mental: -50, feedback: '사람들에게 밟혀 허리 부상!' },
+                            { text: '비명을 지르며 바닥으로 다이빙한다.', hp: -70, mental: -60, feedback: '압사 위기 발생.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 패딩 깃과 가방 끈 문 끼임',
+                        narrative: '⚠️ 슬라이딩 도어가 닫히며 롱패딩 깃이 문 외부에 깊숙이 끼었다!',
+                        options: [
+                            { text: '지퍼를 내려 패딩을 벗어 몸을 분리하고 다음 역 열림을 기다린다.', hp: -10, mental: +5, feedback: '신속한 옷 분리로 안전 확보!' },
+                            { text: '문이 닫힌 상태에서 옷을 힘으로 무작정 뜯어당긴다.', hp: -35, mental: -30, feedback: '패딩이 대파되고 옷감 찢어짐.' },
+                            { text: '비상 탈출 레버를 당겨 열차를 멈춘다.', hp: -50, mental: -80, feedback: '전동차 운행 중단 및 벌금 300만 원!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 급정거 도미노 충돌 사건',
+                        narrative: '열차가 급정거! 백 여명의 체중이 당신 방향으로 일제히 쏠린다!',
+                        options: [
+                            { text: '하체 기지를 낮추고 옆 사람의 체중을 어깨로 살짝 받쳐 분산한다.', hp: -10, mental: +5, feedback: '코어 힘으로 대형 충돌 회피!' },
+                            { text: '앞사람 몸 전체에 체중을 싣고 기댄다.', hp: -40, mental: -40, feedback: '앞사람과 대형 말다툼 발생.' },
+                            { text: '손잡이를 놓고 공중에 몸을 던진다.', hp: -60, mental: -40, feedback: '천장 봉에 머리를 받아 혹 발생.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 과호흡 증후군 패닉 발작',
+                        narrative: '답답함이 극에 달해 손가락이 마비되고 호흡이 짚어진다!',
+                        options: [
+                            { text: '마스크 안에서 숨을 천천히 내쉬며 날숨을 길게 쉬는 숫자를 세어 가다듬는다.', hp: +5, mental: +10, feedback: '과호흡 증세 완벽 진정!' },
+                            { text: '가슴을 탕탕 치며 허겁지겁 숨을 마신다.', hp: -40, mental: -50, feedback: '과호흡 심화로 기절 위기.' },
+                            { text: '지하철 바닥에 쓰러진다.', hp: -30, mental: -40, feedback: '사람들에게 밟힐 위험.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 하차 30초 전 중앙 갇힘 통과',
+                        narrative: '도착 방송이 나오지만 중앙에 갇혀 사람들이 안 비켜준다.',
+                        options: [
+                            { text: '"내리겠습니다!"를 복식 호흡으로 명확히 외치고 어깨 사이 틈을 탄다.', hp: 0, mental: +5, feedback: '모세의 기적처럼 길 개척!' },
+                            { text: '주먹으로 사람들 등뒤를 밀치며 돌파한다.', hp: -40, mental: -40, feedback: '집단 항의로 가방 끈 끊어짐.' },
+                            { text: '포기하고 다음 역에서 내린다.', hp: -20, mental: -70, feedback: '지각 확정 및 시말서 각.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 08:59:10초 지각 직전 회사 게이트',
+                        narrative: '엘리베이터 대기 20명! 4층 계단이 눈앞에 보인다.',
+                        options: [
+                            { text: '계단을 2칸씩 폭풍 전력 질주로 뛰어 올라가 59분 50초 태그!', hp: -20, mental: +20, feedback: '8시 59분 55초 칼출근 성공!' },
+                            { text: '닫히는 엘리베이터 문 사이에 손을 밀어 넣는다.', hp: -50, mental: -40, feedback: '손가락 골절 부상.' },
+                            { text: '카페 들러 커피 사고 지각 사유서를 쓴다.', hp: 0, mental: -80, feedback: '시말서 및 연봉 감봉.' }
+                        ]
+                    }
+                ]
+            },
+
+            // --- 🏢 8. 극I(내향인) 대형모임 (EXTREME) ---
+            {
+                id: 'introvert',
+                category: 'life',
+                title: '극I(내향인) 대형모임 살아남기',
+                badge: '스텔스 방어자 훈장',
+                difficulty: 4.0,
+                time: '10초/문항',
+                image: IMG_INTROVERT,
+                desc: '30명의 초고성능 인싸 파티! 기습 장기자랑, 댄스 타임, 맞팔 압박 속에서 에너지를 지키고 탈출하라!',
+                icon: 'users',
+                badgeDesc: '사회적 기침 및 에너지를 완벽히 조절하여 스텔스 탈출.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 인싸 파티장 입성 후 거점 점령',
+                        narrative: '쿵쾅거리는 소음! 진행자가 다가와 "오늘의 주인공 오셨다!"라며 소리친다.',
+                        options: [
+                            { text: '자연스럽게 음료 잔을 들고 구석 벽을 등진 소파 자리에 착석.', hp: 0, mental: +5, feedback: '사각지대 거점 점령 성공!' },
+                            { text: '분위기에 맞춰 중앙 무대 테이블로 간다.', hp: -30, mental: -50, feedback: '3초 만에 기습 댄스 지목 당함!' },
+                            { text: '화장실로 들어가 20분간 문을 잠근다.', hp: -10, mental: -30, feedback: '화장실 고립 및 도피 자괴감.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: E성향 300% 참가자의 기습 스몰토크',
+                        narrative: '"외로워 보이시네요! MBTI가 뭐예요? 자기소개 댄스 가시죠!"',
+                        options: [
+                            { text: '미소를 지으며 "네! 혹시 이 모임 오신 지 오래되셨어요?" 질문 되받아치기.', hp: 0, mental: +5, feedback: '상대가 자기 얘기 신나게 하게 만듦!' },
+                            { text: '동공지진을 일으키며 어버버거린다.', hp: -30, mental: -40, feedback: '모든 사람의 시선 집중!' },
+                            { text: '"저 대인기피증 있습니다" 하고 차갑게 쏘아붙인다.', hp: -20, mental: -40, feedback: '파티장 분위기 냉각.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 마이크 지목 자기소개 타임',
+                        narrative: '진행자가 마이크를 들고 손가락으로 당신을 지목한다!',
+                        options: [
+                            { text: '목을 가리키며 쉰 소리로 "목감기가 심해서 죄송합니다" 양해를 구한다.', hp: 0, mental: +10, feedback: '자연스럽게 무대 지목 모면!' },
+                            { text: '무대로 나가 어색한 로봇 춤을 춘다.', hp: -50, mental: -70, feedback: '흑역사 릴스 영상 생성!' },
+                            { text: '테이블 밑으로 몸을 숨긴다.', hp: -40, mental: -50, feedback: '사람들의 웃음거리 전락.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 짝짓기 강제 커플 댄스',
+                        narrative: '⚠️ 손을 잡고 원을 그리며 댄스를 유도하는 타임!',
+                        options: [
+                            { text: '뻣뻣한 나무처럼 서서 어색한 미소만 지으며 유연하게 흘려보낸다.', hp: -10, mental: -20, feedback: '최소한의 에너지 손실로 방어!' },
+                            { text: '발이 엉켜 옆 사람을 밟고 넘어진다.', hp: -30, mental: -40, feedback: '몸 부상 및 쪽팔림 발생.' },
+                            { text: '손을 뿌리치고 밖으로 달아난다.', hp: -20, mental: -50, feedback: '갑분싸 주범으로 낙인.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 뷔페 음식 라인 수다 장벽',
+                        narrative: '배가 고프지만 인싸 5명이 음식대 앞에서 열띤 수다를 떨고 있다.',
+                        options: [
+                            { text: '타이밍을 보아 샐러드 코너부터 조용히 집어온다.', hp: +5, mental: 0, feedback: '소란 없이 허기 채움!' },
+                            { text: '수다 사이에 억지로 끼어들어 고기를 집는다.', hp: -20, mental: -35, feedback: '강제 수다 합류.' },
+                            { text: '음식을 포기하고 생수만 마신다.', hp: -20, mental: -20, feedback: '빈속 위경련 발생.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 인스타그램 맞팔 요구',
+                        narrative: '3명이 동시에 폰을 내밀며 "맞팔해요! 팔로워 몇 명이에요?"',
+                        options: [
+                            { text: '비공개 부계정을 선뜻 보여준다.', hp: 0, mental: +5, feedback: '사생활 완벽 방어!' },
+                            { text: '"저 2G 폰 씁니다" 거짓말을 한다.', hp: -20, mental: -30, feedback: '최신 폰 들고 있어 들통남.' },
+                            { text: '본계정을 주고 다 차단한다.', hp: -15, mental: -25, feedback: '나중에 후처리 피곤.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 에너지가 0% 방전된 순간',
+                        narrative: '얼굴 근육 마비! 더 이상 미소를 지을 수 없다!',
+                        options: [
+                            { text: '가방을 챙겨 화장실 가는 척 스텔스 퇴장.', hp: +5, mental: +10, feedback: '완벽한 스텔스 탈출 성공!' },
+                            { text: '주최자에게 작별 인사를 하러 간다.', hp: -30, mental: -50, feedback: '2차 노래방에 강제 납치.' },
+                            { text: '소파에서 잠든 척한다.', hp: -20, mental: -30, feedback: '구급차 부르려 함.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 귀가 후 단톡방 폭격',
+                        narrative: '집 도착! 침대에 누웠으나 단톡방 알림 100개!',
+                        options: [
+                            { text: '방해금지 모드로 바꾸고 즉시 수면.', hp: +10, mental: +20, feedback: '완벽한 힐링! 내향인 생존왕!' },
+                            { text: '1:1로 장문의 답장을 쓴다.', hp: -40, mental: -50, feedback: '새벽 불면증 유발.' },
+                            { text: '야식을 폭식한다.', hp: -20, mental: -20, feedback: '속쓰림 발생.' }
+                        ]
+                    }
+                ]
+            },
+
+            // --- 🌿 9. 아마존 정글 고립 살아남기 (EXTREME) ---
+            {
+                id: 'amazon',
+                category: 'disaster',
+                title: '아마존 정글 고립 살아남기',
+                badge: '정글 탐험가 훈장',
+                difficulty: 4.8,
+                time: '10초/문항',
+                image: IMG_AMAZON,
+                desc: '독충, 피라냐, 아나콘다, 열대성 감염병! 10초 내 오지의 생존 정석을 적용하지 못하면 정글의 양분으로 전락!',
+                icon: 'trees',
+                badgeDesc: '밀림의 온갖 맹수와 독충을 이겨내고 문명 사회로 생환.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 비행기 추락 잔해 수색',
+                        narrative: '비행기 잔해에서 연기가 난다! 곧 폭발 위기 속 무엇을 챙길 것인가?',
+                        options: [
+                            { text: '구급상자, 칼, 은박 비상시트를 신속히 챙겨 이탈한다.', hp: +5, mental: +5, feedback: '생존 필수 도구 확보!' },
+                            { text: '무거운 철판 무기를 찾으려 수색한다.', hp: -20, mental: -20, feedback: '폭발 열기에 찰과상 입음.' },
+                            { text: '스낵 박스를 몽땅 주워 담는다.', hp: -30, mental: -20, feedback: '무게 때문에 이동 불가.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 식수 확보와 피라냐 수역',
+                        narrative: '목이 타 들어간다. 강물이 보이지만 피라냐 위험이 있다.',
+                        options: [
+                            { text: '야생 덩굴을 잘라 나오는 맑은 수분을 마신다.', hp: +5, mental: +5, feedback: '안전한 식수 확보!' },
+                            { text: '강물을 손으로 움켜쥐고 마신다.', hp: -50, mental: -40, feedback: '이질균 흡입으로 위경련!' },
+                            { text: '강에 발을 담그고 물을 긷는다.', hp: -60, mental: -50, feedback: '피라냐에게 발가락 물림!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 맹독 불개미 떼의 습격',
+                        narrative: '붉은 독개미 수천 마리가 신발 위로 기어올라온다!',
+                        options: [
+                            { text: '진흙을 몸에 문질러 접근을 막고 털어낸다.', hp: -5, mental: +5, feedback: '진흙 보호막 완벽!' },
+                            { text: '손으로 개미를 으깨며 턴다.', hp: -40, mental: -30, feedback: '손바닥에 독 침 세례!' },
+                            { text: '나무 위로 올라간다.', hp: -50, mental: -40, feedback: '개미집을 건드려 폭격당함.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 독성 버섯과 열매 구별',
+                        narrative: '⚠️ 화려한 주황색 버섯과 붉은 열매를 발견했다!',
+                        options: [
+                            { text: '모르는 열매는 먹지 않고 새가 먹은 흔적을 살핀다.', hp: 0, mental: -10, feedback: '중독 위기 회피!' },
+                            { text: '주황색 버섯을 크게 베어 물어본다.', hp: -70, mental: -60, feedback: '신경독으로 구토 작열!' },
+                            { text: '즙을 혀에 대본다.', hp: -30, mental: -20, feedback: '혀 마비 증상 발생.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 야간 은신처 구축',
+                        narrative: '해가 지며 야생 맹수의 포효 소리가 들린다.',
+                        options: [
+                            { text: '지면에서 떨어진 해먹형 쉼터를 만든다.', hp: +5, mental: +10, feedback: '안전한 야간 은신처 완성!' },
+                            { text: '동굴 속으로 들어간다.', hp: -50, mental: -50, feedback: '재규어 서식지에 진입.' },
+                            { text: '바닥 나뭇잎 위에서 잔다.', hp: -40, mental: -30, feedback: '독뱀 표적화.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 거대 아나콘다의 기습',
+                        narrative: '5m 아나콘다가 다리를 감아쥐려 한다!',
+                        options: [
+                            { text: '칼로 뱀의 눈과 머리를 집요하게 공격한다.', hp: -10, mental: +10, feedback: '거부 공격으로 탈출 성공!' },
+                            { text: '손으로 뱀 몸통을 떼어내려 한다.', hp: -60, mental: -50, feedback: '압박력 가중으로 늑골 골절.' },
+                            { text: '소리를 지르며 굳어버린다.', hp: -70, mental: -60, feedback: '전신 압박당함.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 방향 감각 상실 탈출 수칙',
+                        narrative: '밀림 한가운데서 방향을 잃었다.',
+                        options: [
+                            { text: '작은 시냇물을 따라 하류로 계속 내려간다.', hp: +5, mental: +10, feedback: '인가 발견 정석 수칙!' },
+                            { text: '높은 산봉우리로 직진한다.', hp: -50, mental: -40, feedback: '절벽에 막혀 체력 고갈.' },
+                            { text: '제자리에 서서 기다린다.', hp: -40, mental: -40, feedback: '구조 불가 구역.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 강가 원주민 목선 발견',
+                        narrative: '강 하류 도달! 멀리 목선이 지나간다.',
+                        options: [
+                            { text: '은박 비상시트로 햇빛을 반사하고 옷을 흔든다.', hp: +10, mental: +20, feedback: '축하합니다! 아마존 밀림 기적 생환!' },
+                            { text: '물속으로 다이빙해서 헤엄친다.', hp: -60, mental: -50, feedback: '와류 및 피라냐 공격.' },
+                            { text: '소리만 지른다.', hp: -20, mental: -30, feedback: '엔진 소리에 묻힘.' }
+                        ]
+                    }
+                ]
+            },
+
+            // --- 👻 10. 한국고전 & 도시괴담 살아남기 (EXTREME) ---
+            {
+                id: 'korean_ghost',
+                category: 'disaster',
+                title: '한국고전 & 도시괴담 살아남기',
+                badge: '퇴마 및 금기 수호자 훈장',
+                difficulty: 4.5,
+                time: '10초/문항',
+                image: IMG_KOREAN_GHOST,
+                desc: '홍콩할매, 빨간마스크, 자유로 귀신! 한국 전설 속 금기를 깨트리지 않고 10초 내에 살아남아라.',
+                icon: 'ghost',
+                badgeDesc: '도시괴담 속 금기를 지켜 악귀로부터 완벽 생환.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 빨간마스크의 질문',
+                        narrative: '어두운 골목길. 빨간 마스크 여자가 묻는다. "나 예뻐?"',
+                        options: [
+                            { text: '"보통이에요" 또는 "평범해요"라고 애매하게 대답한다.', hp: 0, mental: +5, feedback: '마스크 여자가 당황한 사이 탈출!' },
+                            { text: '"네! 엄청 예쁘세요!"라고 외친다.', hp: -60, mental: -60, feedback: '"그럼 너도 예쁘게 해줄게" 입 찢김!' },
+                            { text: '"아니요, 기괴해요"라고 말한다.', hp: -70, mental: -60, feedback: '분노한 가위 공격!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 홍콩할매귀신의 덮치기',
+                        narrative: '고양이 얼굴의 홍콩할매귀신이 손톱을 세우고 나타났다!',
+                        options: [
+                            { text: '손톱과 발톱을 숨기고 고양이 소리를 내지 않으며 시선을 피한다.', hp: 0, mental: +5, feedback: '관심을 잃고 귀신이 물러남!' },
+                            { text: '"야옹~" 고양이 애교를 부린다.', hp: -50, mental: -50, feedback: '놀리는 줄 알고 손톱 폭격!' },
+                            { text: '소리 지르며 도망친다.', hp: -40, mental: -40, feedback: '뒷덜미를 잡힘.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 심야 엘리베이터 다른 세계 이동 괴담',
+                        narrative: '4층에서 멈추더니 기괴한 여자가 탑승하려 한다!',
+                        options: [
+                            { text: '여자를 절대 쳐다보지 말고 1층 버튼을 연타하며 기도한다.', hp: +2, mental: +5, feedback: '이계 진입 방어!' },
+                            { text: '"몇 층 가세요?" 친절히 묻는다.', hp: -60, mental: -60, feedback: '눈동자가 없는 얼굴 정면 목격!' },
+                            { text: '열림 버튼을 눌러준다.', hp: -40, mental: -50, feedback: '무한 상승 모드 진입.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 자유로 귀신의 선글라스',
+                        narrative: '⚠️ 심야 운전 중 선글라스를 낀 여자가 손을 든다!',
+                        options: [
+                            { text: '상대하지 않고 룸미러도 보지 않은 채 차속을 유지 통과.', hp: 0, mental: +5, feedback: '환영 마귀 회피!' },
+                            { text: '차를 세우고 창문을 내린다.', hp: -70, mental: -70, feedback: '구멍 뚫린 눈동자 목격!' },
+                            { text: '룸미러로 유심히 본다.', hp: -50, mental: -50, feedback: '뒷좌석 탑승 발견.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 분홍신을 주운 자의 저주',
+                        narrative: '분홍신을 신자 의지와 상관없이 춤을 추기 시작한다!',
+                        options: [
+                            { text: '굵은소금을 뿌리거나 신발 끈을 칼로 즉시 자른다.', hp: -10, mental: +10, feedback: '저주와의 결착 해제!' },
+                            { text: '신나게 춤추며 릴스를 찍는다.', hp: -60, mental: -60, feedback: '발목 부러질 때까지 춤춤.' },
+                            { text: '손으로 잡아당긴다.', hp: -40, mental: -40, feedback: '피부에 착붙어 안 떨어짐.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 구미호의 간 빼먹기',
+                        narrative: '소복 입은 여인이 다쳤다며 업어달라고 한다.',
+                        options: [
+                            { text: '등 뒤 꼬리를 확인하고 팥이나 개 짓는 소리로 유인.', hp: 0, mental: +5, feedback: '정체 파악당한 구미호 도망!' },
+                            { text: '흔쾌히 지게에 업어준다.', hp: -80, mental: -80, feedback: '정상에서 간 파먹힘.' },
+                            { text: '손을 잡고 붕대를 감아준다.', hp: -50, mental: -50, feedback: '손목 베임.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 분신사바 영혼 소환 금기',
+                        narrative: '볼펜이 미친 듯이 돌며 "죽여줄까?"로 향한다!',
+                        options: [
+                            { text: '손을 절대 떼지 말고 주문을 닫고 정중히 돌려보낸다.', hp: 0, mental: +10, feedback: '계약 정석 종료!' },
+                            { text: '손을 팍 놓고 달아난다.', hp: -60, mental: -70, feedback: '악귀 빙의.' },
+                            { text: '볼펜을 부러뜨린다.', hp: -50, mental: -60, feedback: '폴터가이스트 발동.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 밤 12시 거울 속 분신과의 눈싸움',
+                        narrative: '거울 속 나의 가위바위보 손모양이 달라졌다!',
+                        options: [
+                            { text: '즉시 눈을 감고 거울 위에 두꺼운 천을 덮어 버린다.', hp: +10, mental: +20, feedback: '축하합니다! 괴담 금기 통과 완벽 생존!' },
+                            { text: '"너 누구야?" 물어본다.', hp: -70, mental: -70, feedback: '거울 속 분신과 교체됨.' },
+                            { text: '거울을 깨뜨린다.', hp: -50, mental: -40, feedback: '저주의 파편 확산.' }
+                        ]
+                    }
+                ]
+            },
+
+            // --- 🎬 11. 공포영화 속 주인공 살아남기 (EXTREME) ---
+            {
+                id: 'horror_movie',
+                category: 'disaster',
+                title: '공포영화 속 주인공 살아남기',
+                badge: '최종 파이널 걸 훈장',
+                difficulty: 4.8,
+                time: '10초/문항',
+                image: IMG_HORROR_MOVIE,
+                desc: '클리셰 폭발! "나 금방 돌아올게", "갈라져서 수색하자" 사망 플래그를 깨부수고 최후의 파이널 서바이버가 되어라.',
+                icon: 'clapperboard',
+                badgeDesc: '공포영화 사망 플래그를 철저히 역이용하여 유일한 생존자 달성.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 음산한 산장과 "갈라져서 수색하자"',
+                        narrative: '전기가 나간 산장. 친구가 "갈라져서 수색하자!"라고 제안한다.',
+                        options: [
+                            { text: '"미쳤어? 무조건 등 뒤를 맞대고 붙어 움직이자!"', hp: 0, mental: +5, feedback: '각개격파 완벽 차단!' },
+                            { text: '"좋아, 난 2층 어두운 다락방 혼자 볼게."', hp: -60, mental: -50, feedback: '다락방 가시 살육 작렬!' },
+                            { text: '"난 지하실 두꺼비집 보고 올게."', hp: -50, mental: -40, feedback: '지하실 계단 낙하.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 의문의 소리와 사망 플래그 발언',
+                        narrative: '지하실에서 쿵쿵 소리가 난다. 친구가 "금방 다녀올게"라고 한다.',
+                        options: [
+                            { text: '친구 옷자락을 바짝 잡고 "절대 혼자 가지 마!" 말린다.', hp: 0, mental: +5, feedback: '사망 플래그 미연 방지!' },
+                            { text: '"응 금방 와~" 손을 흔든다.', hp: -40, mental: -50, feedback: '5분 뒤 친구 비명 소리.' },
+                            { text: '"누구 계세요?" 크게 외친다.', hp: -35, mental: -40, feedback: '위치 완벽 노출.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 시동이 걸리지 않는 탈출 차량',
+                        narrative: '차에 탔으나 시동이 터터턱 걸리지 않는다!',
+                        options: [
+                            { text: '클러치를 밟고 차분하게 키를 돌려 3번째에 터트린다.', hp: +5, mental: +5, feedback: '차분함으로 시동 성공!' },
+                            { text: '운전대에 머리를 박고 소리 지른다.', hp: -40, mental: -50, feedback: '살인마가 도끼로 창문 깸.' },
+                            { text: '차를 버리고 어두운 숲으로 뛴다.', hp: -50, mental: -40, feedback: '숲속 덫에 걸림.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 쓰러진 살인마 확인 사살',
+                        narrative: '⚠️ 살인마를 프라이팬으로 후려쳐 쓰러뜨렸다!',
+                        options: [
+                            { text: '둔기로 머리에 확인 사살 후 무기를 멀리 치운다.', hp: +5, mental: +10, feedback: '부활 클리셰 완벽 차단!' },
+                            { text: '"이제 끝났다..." 무기를 버린다.', hp: -70, mental: -70, feedback: '살인마가 발목 낚아챔!' },
+                            { text: '가면을 호기심에 벗겨본다.', hp: -60, mental: -60, feedback: '목 감아쥐기 기습!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 커플의 밀회 시도 차단',
+                        narrative: '위기 속 커플 친구가 "골방에 들어가 있자"고 한다.',
+                        options: [
+                            { text: '등짝을 때리며 "지금 그러면 1순위로 죽어!" 끌고 온다.', hp: 0, mental: +5, feedback: '애정 행각 사망 공식 파괴!' },
+                            { text: '둘만의 시간을 보내게 둔다.', hp: -30, mental: -40, feedback: '골방에서 둘 다 사망.' },
+                            { text: '나도 끼워달라고 들어간다.', hp: -40, mental: -50, feedback: '셋이 함께 갇힘.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 의문의 경찰관 도착',
+                        narrative: '혼자 내린 경찰관이 "안심하세요"라고 들어온다.',
+                        options: [
+                            { text: '경찰관 뒤를 경계하며 차 안 무전기부터 확보한다.', hp: 0, mental: +5, feedback: '경찰 무력화 패턴 대비!' },
+                            { text: '경찰관을 끌어안고 눈물 흘린다.', hp: -50, mental: -50, feedback: '뒤에서 날아온 낫에 투하.' },
+                            { text: '경찰차를 빼앗아 도망친다.', hp: -30, mental: -30, feedback: '키가 없어 실패.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 세면대 거울 속 기습',
+                        narrative: '고개를 들자 거울 뒤로 그림자가 지나간다!',
+                        options: [
+                            { text: '뒤돌지 않고 옆으로 굴러 공간을 확보한다.', hp: -5, mental: +10, feedback: '기습 칼날 한 끗 차 회피!' },
+                            { text: '천천히 뒤를 돌아본다.', hp: -70, mental: -60, feedback: '복부에 칼빵 작렬!' },
+                            { text: '세면대 밑에 머리를 파묻는다.', hp: -60, mental: -50, feedback: '무방비 제압당함.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 엔딩 크레딧 1초 전 기습 부활',
+                        narrative: '구급차 문이 뒤에서 강제로 열린다!',
+                        options: [
+                            { text: '산소통 밸브를 열어 살인마 얼굴에 내뿜고 밀쳐낸다.', hp: +10, mental: +20, feedback: '축하합니다! 유일한 파이널 걸 생존 성공!' },
+                            { text: '멍하니 바라보며 비명을 지른다.', hp: -80, mental: -70, feedback: '쿠키 영상 살육 장식.' },
+                            { text: '구급대원 뒤로 숨는다.', hp: -40, mental: -40, feedback: '구급대원 먼저 쓰러짐.' }
+                        ]
+                    }
+                ]
+            },
+
+            // --- 📰 12. 가짜 뉴스로부터 살아남기 (EXTREME) ---
+            {
+                id: 'fake_news',
+                category: 'life',
+                title: '가짜 뉴스로부터 살아남기',
+                badge: '팩트체커 수호자 훈장',
+                difficulty: 4.2,
+                time: '10초/문항',
+                image: IMG_FAKE_NEWS,
+                desc: '딥페이크, 주가 조작, 악성 스미싱, 음모론! 비판적 리터러시 지식을 가동하지 않으면 전 재산 파산과 법적 처벌!',
+                icon: 'newspaper',
+                badgeDesc: '지능형 피싱과 AI 합성 가짜 뉴스를 선별해낸 최고의 팩트체커.',
+                stages: [
+                    {
+                        title: 'STAGE 1: [단독] 상장폐지 작전주 1000% 카톡방',
+                        narrative: '주식 단톡방에 "내일 바이오 신약 상장! 미공개 정보" 링크가 날아왔다!',
+                        options: [
+                            { text: '금융감독원 공시 시스템(DART)에서 실제 공시 여부를 조회한다.', hp: 0, mental: +5, feedback: '허위 세력 작전주임을 확인!' },
+                            { text: '퇴직금 절반을 매수한다.', hp: -60, mental: -70, feedback: '상장폐지로 전 재산 증발!' },
+                            { text: '지인들에게 공유한다.', hp: -30, mental: -50, feedback: '유포자 고소 당함.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 대통령 딥페이크 비상사태 선포 영상',
+                        narrative: '대통령이 통행금지를 선포하는 4K 고화질 숏폼 영상이 떴다!',
+                        options: [
+                            { text: '음성 입모양 불일치를 확인하고 정부 대변인 브리핑 기사를 조회한다.', hp: 0, mental: +5, feedback: 'AI 딥페이크 합성물 인지!' },
+                            { text: '마트로 달려가 쌀을 사재기한다.', hp: -30, mental: -30, feedback: '불필요한 지출 발생.' },
+                            { text: 'SNS에 전쟁 시작 글을 쓴다.', hp: -20, mental: -40, feedback: '유언비어 처벌 위기.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 커뮤니티 찌라시 연예인 마약 루머',
+                        narrative: '유명 배우가 입건되었다는 출처 불명 블로그 글이 떴다.',
+                        options: [
+                            { text: '경찰 공식 발표 및 제도권 주요 언론 보도를 기다린다.', hp: 0, mental: +2, feedback: '선동당하지 않고 중립 유지!' },
+                            { text: '배우 인스타에 찾아가 악플을 단다.', hp: -40, mental: -50, feedback: '명예훼손 고소장 수령!' },
+                            { text: '글을 캡처해 단톡방에 퍼뜨린다.', hp: -25, mental: -35, feedback: '허위 유포자 지정.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 재난 지원금 미수령 스미싱 문자',
+                        narrative: '⚠️ [정부발송] 미수령 환급금 85만원 즉시 지급! [click.kr/app]',
+                        options: [
+                            { text: '링크를 누르지 않고 해당 주민센터나 110 정부콜센터로 전화 문의한다.', hp: 0, mental: +5, feedback: '악성 뱅킹 앱 설치 완벽 방어!' },
+                            { text: '돈이 급해 바로 링크를 눌러 비번을 입력한다.', hp: -70, mental: -80, feedback: '통장 잔고 0원 및 오픈뱅킹 털림!' },
+                            { text: '문자 번호로 전화해 따진다.', hp: -20, mental: -20, feedback: '피싱범과의 설전 스트레스.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 암 완치 100% 산삼 엑기스 광고',
+                        narrative: '3일 만에 암세포가 소멸된다는 산삼 제품 후기 영상이 도배된다.',
+                        options: [
+                            { text: '식약처 인증 마크 및 임상 검증 여부를 확인한다.', hp: 0, mental: +3, feedback: '과대 허위 광고 확인!' },
+                            { text: '200만 원어치 결제한다.', hp: -40, mental: -50, feedback: '설탕물 제품 판명.' },
+                            { text: '병원 치료를 중단하고 이 약만 먹는다.', hp: -80, mental: -80, feedback: '병세 급격 악화.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 교묘히 자른 악마의 인터뷰 편집',
+                        narrative: '정치가가 "국민은 개돼지"라 말하는 5초 짜리 쇼츠가 유행한다.',
+                        options: [
+                            { text: '원본 풀버전 영상과 앞뒤 맥락을 조회한다.', hp: 0, mental: +5, feedback: '교묘한 짜깁기 편집 파악!' },
+                            { text: '모니터에 침을 뱉고 분노한다.', hp: -20, mental: -40, feedback: '혈압 상승.' },
+                            { text: '정당에 가입해 집회 나간다.', hp: -30, mental: -30, feedback: '정치적 선동 피인.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 당근마켓 무료 나눔 선입금 사기',
+                        narrative: '아이폰15 무료 나눔! 단, 택배비 5천원을 요구한다.',
+                        options: [
+                            { text: '무료 나눔 선입금 요구는 100% 사기 패턴임을 파악하고 신고한다.', hp: 0, mental: +5, feedback: '다수 소액 사기 방어!' },
+                            { text: '5천원을 바로 송금한다.', hp: -30, mental: -30, feedback: '카톡 차단 당함.' },
+                            { text: '집 주소와 비번을 가르쳐준다.', hp: -50, mental: -50, feedback: '개인정보 유출.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: AI 생성 정보 비판적 리터러시 최종 검증',
+                        narrative: '정보의 홍수 시대, 최종 팩트체커 리터러시 테스트!',
+                        options: [
+                            { text: '출처 확인, Cross-Checking, 크로스 팩트체크 매체 활용 수칙 준수.', hp: +10, mental: +20, feedback: '축하합니다! 가짜 뉴스 시대 명예 팩트체커 달성!' },
+                            { text: '자극적이고 신나는 기사만 골라 읽는다.', hp: -40, mental: -50, feedback: '음모론자 전락.' },
+                            { text: '인터넷을 끊고 뉴스를 안 본다.', hp: -20, mental: -30, feedback: '사회적 고립.' }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        class SurvivalApp {
+            constructor() {
+                this.state = {
+                    nickname: localStorage.getItem('sk_nickname') || '프로 생존자',
+                    soundEnabled: localStorage.getItem('sk_sound') !== 'false',
+                    highScore: parseInt(localStorage.getItem('sk_highScore') || '0'),
+                    attempts: parseInt(localStorage.getItem('sk_attempts') || '0'),
+                    wins: parseInt(localStorage.getItem('sk_wins') || '0'),
+                    unlockedBadges: JSON.parse(localStorage.getItem('sk_badges') || '[]'),
+                    leaderboard: JSON.parse(localStorage.getItem('sk_leaderboard') || JSON.stringify([
+                        { name: '신도림불사조', score: 940, date: '2026-10-10', title: '생존신' },
+                        { name: '잔고800원', score: 910, date: '2026-10-14', title: '생존신' },
+                        { name: '아마존탐험가', score: 890, date: '2026-10-14', title: '생존신' },
+                        { name: '퇴마사김선생', score: 850, date: '2026-10-13', title: '생존왕' },
+                        { name: '팩트체커', score: 820, date: '2026-10-11', title: '생존왕' }
+                    ])),
+                    currentTopic: null,
+                    currentStageIndex: 0,
+                    hp: 100,
+                    mental: 100,
+                    timer: 10,
+                    timerInterval: null,
+                    activeModalTab: 'leaderboard',
+                    filterCategory: 'all'
+                };
+
+                audio.enabled = this.state.soundEnabled;
+            }
+
+            init() {
+                this.updateHeaderUI();
+                this.goHome();
+                lucide.createIcons();
+            }
+
+            updateHeaderUI() {
+                document.getElementById('headerNickname').innerText = this.state.nickname;
+                const soundLabel = document.getElementById('soundLabel');
+                const soundIcon = document.getElementById('soundIcon');
+                
+                if (this.state.soundEnabled) {
+                    soundLabel.innerText = "사운드 ON";
+                    soundIcon.setAttribute('data-lucide', 'volume-2');
+                } else {
+                    soundLabel.innerText = "사운드 OFF";
+                    soundIcon.setAttribute('data-lucide', 'volume-x');
+                }
+                lucide.createIcons();
+            }
+
+            toggleSound() {
+                this.state.soundEnabled = !this.state.soundEnabled;
+                audio.enabled = this.state.soundEnabled;
+                localStorage.setItem('sk_sound', this.state.soundEnabled);
+                this.updateHeaderUI();
+                this.showToast(this.state.soundEnabled ? "🔊 사운드가 활성화되었습니다." : "🔇 음소거되었습니다.");
+            }
+
+            showToast(msg) {
+                const toast = document.getElementById('toast');
+                document.getElementById('toastMsg').innerText = msg;
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+                setTimeout(() => {
+                    toast.classList.remove('translate-y-0', 'opacity-100');
+                    toast.classList.add('translate-y-20', 'opacity-0');
+                }, 2200);
+            }
+
+            goHome() {
+                this.clearQuizTimer();
+                const container = document.getElementById('appContainer');
+
+                const filteredTopics = SURVIVAL_TOPICS.filter(t => {
+                    if (this.state.filterCategory === 'all') return true;
+                    return t.category === this.state.filterCategory;
+                });
+
+                let html = `
+                    <!-- MAIN HERO BANNER SECTION -->
+                    <div class="relative w-full rounded-3xl overflow-hidden border border-king-border bg-gradient-to-r from-king-card via-black to-king-card shadow-2xl mb-10 group">
+                        <div class="absolute inset-0 z-0 opacity-40 group-hover:opacity-50 transition duration-700">
+                            <img src="${IMG_MAIN_HERO}" onerror="this.src='https://placehold.co/1200x500/101420/ffd700?text=SURVIVAL+KING+HERO'" alt="생존왕 메인" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-gradient-to-t from-king-bg via-king-bg/60 to-transparent"></div>
+                            <div class="absolute inset-0 bg-gradient-to-r from-king-bg via-transparent to-king-bg/80"></div>
+                        </div>
+
+                        <div class="relative z-10 p-6 md:p-10 flex flex-col justify-end min-h-[360px] md:min-h-[420px]">
+                            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/30 border border-red-500/50 text-red-400 text-xs font-mono font-bold w-fit mb-3">
+                                <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                                REALTIME EXTREME HARDCORE SURVIVAL SIMULATOR
+                            </div>
+
+                            <h2 class="text-3xl md:text-5xl font-black text-white tracking-tight mb-3 leading-tight">
+                                당신은 극악의 상황에서 <br class="hidden sm:inline">
+                                <span class="shimmer-text">살아남을 수 있는가?</span> 👑
+                            </h2>
+
+                            <p class="text-sm md:text-base text-gray-300 max-w-2xl mb-6 leading-relaxed">
+                                시나리오별 난이도가 <strong class="text-red-400">EXTREME HARDCORE</strong>로 업그레이드되었습니다! <br class="hidden sm:inline">
+                                잘못된 판단 하나로 즉시 피격되는 <strong class="text-king-gold">8문항 고정 & 10초 제한시간</strong>전에서 생존왕에 도전하세요.
+                            </p>
+
+                            <div class="flex flex-wrap items-center gap-3">
+                                <button onclick="app.startRandomQuiz()" class="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-red-600 via-king-neonPink to-king-gold text-black font-black text-sm tracking-wider shadow-xl hover:scale-105 transition flex items-center gap-2 glow-pink">
+                                    <i data-lucide="zap" class="w-5 h-5 fill-black"></i> 무작위 극한 도전
+                                </button>
+                                <button onclick="app.openStatsModal()" class="px-6 py-3.5 rounded-2xl bg-king-card/90 border border-king-gold/50 text-king-gold font-bold text-sm hover:bg-king-gold/20 transition flex items-center gap-2 backdrop-blur-md">
+                                    <i data-lucide="trophy" class="w-4 h-4"></i> 전국 랭킹 확인
+                                </button>
+                            </div>
+
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8 pt-6 border-t border-white/10 text-xs font-mono">
+                                <div>
+                                    <span class="text-gray-400 block">총 생존 시나리오</span>
+                                    <strong class="text-white text-base font-bold">${SURVIVAL_TOPICS.length}개 제공</strong>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400 block">난이도 패치</span>
+                                    <strong class="text-red-400 text-base font-bold">EXTREME UPGRADED</strong>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400 block">문항 제한시간</span>
+                                    <strong class="text-red-400 text-base font-bold">10 SECONDS</strong>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400 block">나의 최고 점수</span>
+                                    <strong class="text-king-neonCyan text-base font-bold">${this.state.highScore} pts</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CATEGORY FILTER BUTTONS -->
+                    <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+                        <div class="flex items-center gap-2 overflow-x-auto pb-1 font-mono text-xs">
+                            <button onclick="app.setFilter('all')" class="px-4 py-2 rounded-xl transition font-bold border ${this.state.filterCategory === 'all' ? 'bg-king-gold text-black border-king-gold' : 'bg-king-card border-king-border text-gray-400 hover:text-white'}">
+                                🔥 전체 시나리오 (${SURVIVAL_TOPICS.length})
+                            </button>
+                            <button onclick="app.setFilter('life')" class="px-4 py-2 rounded-xl transition font-bold border ${this.state.filterCategory === 'life' ? 'bg-king-gold text-black border-king-gold' : 'bg-king-card border-king-border text-gray-400 hover:text-white'}">
+                                🏢 현실/일상 생존
+                            </button>
+                            <button onclick="app.setFilter('disaster')" class="px-4 py-2 rounded-xl transition font-bold border ${this.state.filterCategory === 'disaster' ? 'bg-king-gold text-black border-king-gold' : 'bg-king-card border-king-border text-gray-400 hover:text-white'}">
+                                🌋 극한/재난 생존
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-400 font-mono">카드를 클릭하여 즉시 시뮬레이션 시작</p>
+                    </div>
+
+                    <!-- TOPICS GRID PANELS -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                `;
+
+                filteredTopics.forEach(topic => {
+                    const isBadgeUnlocked = this.state.unlockedBadges.includes(topic.id);
+                    
+                    html += `
+                        <div onclick="app.startQuiz('${topic.id}')" class="panel-card bg-king-card border border-king-border hover:border-king-gold/80 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1.5 shadow-xl flex flex-col justify-between relative group">
+                            
+                            <div class="relative h-48 w-full overflow-hidden bg-black/60">
+                                <img src="${topic.image}" onerror="this.src='https://placehold.co/600x400/101420/ffd700?text=${encodeURIComponent(topic.title)}'" alt="${topic.title}" class="panel-card-img w-full h-full object-cover">
+                                
+                                <div class="absolute inset-0 bg-gradient-to-t from-king-card via-black/30 to-transparent"></div>
+
+                                <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-white text-[11px] font-mono font-bold flex items-center gap-1.5">
+                                    <i data-lucide="${topic.icon}" class="w-3.5 h-3.5 text-king-gold"></i>
+                                    <span>8 STAGES</span>
+                                </div>
+
+                                <div class="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-red-950/80 backdrop-blur-md border border-red-500/30 text-red-400 text-[11px] font-mono font-bold">
+                                    ★ ${topic.difficulty.toFixed(1)} / 5.0
+                                </div>
+
+                                ${isBadgeUnlocked ? `
+                                    <div class="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-king-gold/90 text-black text-[10px] font-bold font-mono flex items-center gap-1 shadow-lg">
+                                        🎖️ 훈장 보유
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <div class="p-5 flex-1 flex flex-col justify-between">
+                                <div>
+                                    <h3 class="text-lg font-bold text-white group-hover:text-king-gold transition mb-2 flex items-center gap-2">
+                                        ${topic.title}
+                                    </h3>
+                                    <p class="text-xs text-gray-400 line-clamp-2 leading-relaxed mb-4">
+                                        ${topic.desc}
+                                    </p>
+                                </div>
+
+                                <div class="pt-3 border-t border-king-border/80 flex items-center justify-between text-xs font-mono">
+                                    <span class="text-gray-400 flex items-center gap-1">
+                                        <i data-lucide="timer" class="w-3.5 h-3.5 text-red-400"></i> ${topic.time}
+                                    </span>
+                                    <span class="text-king-gold group-hover:translate-x-1 transition flex items-center gap-1 font-bold">
+                                        생존 시작 <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `</div>`;
+                container.innerHTML = html;
+                lucide.createIcons();
+            }
+
+            setFilter(category) {
+                audio.play('click');
+                this.state.filterCategory = category;
+                this.goHome();
+            }
+
+            startRandomQuiz() {
+                audio.play('click');
+                const randomIdx = Math.floor(Math.random() * SURVIVAL_TOPICS.length);
+                this.startQuiz(SURVIVAL_TOPICS[randomIdx].id);
+            }
+
+            startQuiz(topicId) {
+                audio.play('click');
+                const topic = SURVIVAL_TOPICS.find(t => t.id === topicId);
+                if (!topic) return;
+
+                this.state.currentTopic = topic;
+                this.state.currentStageIndex = 0;
+                this.state.hp = 100;
+                this.state.mental = 100;
+
+                this.renderQuizStage();
+            }
+
+            clearQuizTimer() {
+                if (this.state.timerInterval) {
+                    clearInterval(this.state.timerInterval);
+                    this.state.timerInterval = null;
+                }
+            }
+
+            startStageTimer() {
+                this.clearQuizTimer();
+                this.state.timer = 10;
+                this.updateTimerUI();
+
+                this.state.timerInterval = setInterval(() => {
+                    this.state.timer--;
+                    this.updateTimerUI();
+
+                    if (this.state.timer <= 0) {
+                        this.clearQuizTimer();
+                        audio.play('damage');
+                        this.handleTimeOut();
+                    }
+                }, 1000);
+            }
+
+            updateTimerUI() {
+                const timerText = document.getElementById('quizTimerText');
+                const timerBar = document.getElementById('quizTimerBar');
+                
+                if (timerText) timerText.innerText = `${this.state.timer}초`;
+                if (timerBar) {
+                    const percentage = (this.state.timer / 10) * 100;
+                    timerBar.style.width = `${percentage}%`;
+                    if (this.state.timer <= 3) {
+                        timerBar.className = "h-full bg-red-600 transition-all duration-300";
+                    } else if (this.state.timer <= 6) {
+                        timerBar.className = "h-full bg-amber-400 transition-all duration-300";
+                    } else {
+                        timerBar.className = "h-full bg-king-neonGreen transition-all duration-300";
+                    }
+                }
+            }
+
+            handleTimeOut() {
+                this.state.hp -= 35;
+                this.state.mental -= 35;
+                
+                if (this.state.hp <= 0 || this.state.mental <= 0) {
+                    this.showResult(false, "제한시간 10초 초과로 적절한 대처에 실패했습니다!");
+                } else {
+                    this.showFeedbackModal("⏱️ 시간 초과!", "10초 내에 선택하지 못하여 극심한 치명상을 입었습니다!", false, () => {
+                        this.nextStage();
+                    });
+                }
+            }
+
+            renderQuizStage() {
+                const topic = this.state.currentTopic;
+                const stage = topic.stages[this.state.currentStageIndex];
+                const container = document.getElementById('appContainer');
+
+                const stageProgress = ((this.state.currentStageIndex + 1) / topic.stages.length) * 100;
+
+                container.innerHTML = `
+                    <div class="max-w-3xl mx-auto bg-king-card border border-king-border rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                        
+                        <div class="flex items-center justify-between border-b border-king-border pb-4 mb-6">
+                            <button onclick="app.goHome()" class="px-3 py-1.5 rounded-xl bg-king-bg border border-king-border text-gray-400 hover:text-white text-xs font-mono transition flex items-center gap-1">
+                                <i data-lucide="arrow-left" class="w-4 h-4"></i> 포기하고 메인으로
+                            </button>
+                            <div class="text-right">
+                                <span class="text-xs font-mono text-gray-400 block">${topic.title}</span>
+                                <strong class="text-sm font-mono text-king-gold">STAGE ${this.state.currentStageIndex + 1} / ${topic.stages.length}</strong>
+                            </div>
+                        </div>
+
+                        <div class="w-full bg-king-bg h-2 rounded-full overflow-hidden mb-6 border border-king-border">
+                            <div class="h-full bg-gradient-to-r from-king-accent via-king-neonPink to-king-gold transition-all duration-500" style="width: ${stageProgress}%"></div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div class="bg-king-bg p-3 rounded-2xl border border-king-border">
+                                <div class="flex justify-between items-center text-xs font-mono mb-1.5">
+                                    <span class="text-red-400 font-bold flex items-center gap-1"><i data-lucide="heart" class="w-3.5 h-3.5 fill-red-400"></i> 신체 체력 (HP)</span>
+                                    <span class="text-white font-bold">${this.state.hp} / 100</span>
+                                </div>
+                                <div class="w-full bg-black/50 h-2.5 rounded-full overflow-hidden">
+                                    <div class="h-full bg-red-500 transition-all duration-300" style="width: ${Math.max(0, this.state.hp)}%"></div>
+                                </div>
+                            </div>
+
+                            <div class="bg-king-bg p-3 rounded-2xl border border-king-border">
+                                <div class="flex justify-between items-center text-xs font-mono mb-1.5">
+                                    <span class="text-king-neonCyan font-bold flex items-center gap-1"><i data-lucide="brain" class="w-3.5 h-3.5"></i> 멘탈 지수 (MENTAL)</span>
+                                    <span class="text-white font-bold">${this.state.mental} / 100</span>
+                                </div>
+                                <div class="w-full bg-black/50 h-2.5 rounded-full overflow-hidden">
+                                    <div class="h-full bg-king-neonCyan transition-all duration-300" style="width: ${Math.max(0, this.state.mental)}%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-red-950/40 border border-red-500/30 p-3 rounded-2xl mb-6 flex items-center justify-between">
+                            <div class="flex items-center gap-2 text-xs font-mono text-red-400 font-bold">
+                                <i data-lucide="clock" class="w-4 h-4 animate-spin"></i>
+                                <span>10초 제한시간 카운트다운</span>
+                            </div>
+                            <span id="quizTimerText" class="text-lg font-black font-mono text-red-400">10초</span>
+                        </div>
+                        <div class="w-full bg-black/60 h-1.5 rounded-full overflow-hidden mb-6">
+                            <div id="quizTimerBar" class="h-full bg-king-neonGreen transition-all duration-300" style="width: 100%"></div>
+                        </div>
+
+                        <div class="bg-king-bg border border-king-border rounded-2xl p-5 mb-6 relative">
+                            <div class="flex gap-4 items-start">
+                                <img src="${topic.image}" onerror="this.src='https://placehold.co/200x200/101420/ffd700?text=SURVIVAL'" alt="Topic Preview" class="w-20 h-20 rounded-xl object-cover border border-king-border hidden sm:block shrink-0">
+                                <div>
+                                    <h4 class="text-base font-bold text-king-gold mb-2 flex items-center gap-2">
+                                        ⚡ ${stage.title}
+                                    </h4>
+                                    <p class="text-sm text-gray-200 leading-relaxed font-sans">
+                                        ${stage.narrative}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            ${stage.options.map((opt, idx) => `
+                                <button onclick="app.selectOption(${idx})" class="w-full text-left p-4 rounded-2xl bg-king-card border border-king-border hover:border-king-gold hover:bg-king-cardHover transition flex items-center justify-between group shadow-md">
+                                    <span class="text-sm text-gray-200 group-hover:text-white font-medium pr-3">
+                                        <strong class="text-king-gold font-mono mr-2">${idx + 1}.</strong>${opt.text}
+                                    </span>
+                                    <i data-lucide="chevron-right" class="w-4 h-4 text-gray-500 group-hover:text-king-gold transition shrink-0"></i>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+
+                lucide.createIcons();
+                this.startStageTimer();
+            }
+
+            selectOption(optionIndex) {
+                this.clearQuizTimer();
+                const topic = this.state.currentTopic;
+                const stage = topic.stages[this.state.currentStageIndex];
+                const selected = stage.options[optionIndex];
+
+                this.state.hp = Math.min(100, this.state.hp + selected.hp);
+                this.state.mental = Math.min(100, this.state.mental + selected.mental);
+
+                const isSuccess = selected.hp >= 0 && selected.mental >= 0;
+
+                if (isSuccess) {
+                    audio.play('correct');
+                } else {
+                    audio.play('damage');
+                }
+
+                if (this.state.hp <= 0 || this.state.mental <= 0) {
+                    this.showResult(false, selected.feedback);
+                    return;
+                }
+
+                this.showFeedbackModal(
+                    isSuccess ? "✅ 최선의 판단!" : "⚠️ 피해 발생!",
+                    `${selected.feedback}<br><br><span class="text-xs text-gray-400 font-mono">체력: ${selected.hp > 0 ? '+' : ''}${selected.hp} | 멘탈: ${selected.mental > 0 ? '+' : ''}${selected.mental}</span>`,
+                    isSuccess,
+                    () => {
+                        this.nextStage();
+                    }
+                );
+            }
+
+            nextStage() {
+                const topic = this.state.currentTopic;
+                this.state.currentStageIndex++;
+
+                if (this.state.currentStageIndex >= topic.stages.length) {
+                    this.showResult(true, "축하합니다! 극한 난이도의 8개 단계를 완벽히 돌파하여 생존 성공!");
+                } else {
+                    this.renderQuizStage();
+                }
+            }
+
+            showFeedbackModal(title, bodyHtml, isSuccess, callback) {
+                const modal = document.createElement('div');
+                modal.className = "fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in";
+                
+                modal.innerHTML = `
+                    <div class="bg-king-card border ${isSuccess ? 'border-king-neonGreen' : 'border-red-500'} rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl">
+                        <h3 class="text-xl font-bold ${isSuccess ? 'text-king-neonGreen' : 'text-red-400'} mb-3">${title}</h3>
+                        <p class="text-sm text-gray-200 mb-6 leading-relaxed">${bodyHtml}</p>
+                        <button id="feedbackNextBtn" class="w-full py-3 rounded-xl ${isSuccess ? 'bg-king-neonGreen text-black' : 'bg-red-600 text-white'} font-bold text-sm hover:opacity-90 transition">
+                            다음 단계로 진행
+                        </button>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+                document.getElementById('feedbackNextBtn').onclick = () => {
+                    audio.play('click');
+                    document.body.removeChild(modal);
+                    callback();
+                };
+            }
+
+            showResult(isVictory, finalMsg) {
+                this.clearQuizTimer();
+                this.state.attempts++;
+
+                const topic = this.state.currentTopic;
+                const score = isVictory ? Math.max(100, (this.state.hp + this.state.mental) * 5) : 0;
+
+                if (isVictory) {
+                    this.state.wins++;
+                    audio.play('victory');
+                    if (confetti) {
+                        confetti({
+                            particleCount: 120,
+                            spread: 80,
+                            origin: { y: 0.6 }
+                        });
+                    }
+
+                    if (!this.state.unlockedBadges.includes(topic.id)) {
+                        this.state.unlockedBadges.push(topic.id);
+                        localStorage.setItem('sk_badges', JSON.stringify(this.state.unlockedBadges));
+                    }
+
+                    if (score > this.state.highScore) {
+                        this.state.highScore = score;
+                        localStorage.setItem('sk_highScore', this.state.highScore);
+                    }
+
+                    this.state.leaderboard.push({
+                        name: this.state.nickname,
+                        score: score,
+                        date: new Date().toISOString().split('T')[0],
+                        title: score >= 900 ? '생존신' : '생존왕'
+                    });
+                    this.state.leaderboard.sort((a, b) => b.score - a.score);
+                    this.state.leaderboard = this.state.leaderboard.slice(0, 10);
+                    localStorage.setItem('sk_leaderboard', JSON.stringify(this.state.leaderboard));
+
+                } else {
+                    audio.play('gameover');
+                }
+
+                localStorage.setItem('sk_attempts', this.state.attempts);
+                localStorage.setItem('sk_wins', this.state.wins);
+
+                const container = document.getElementById('appContainer');
+
+                container.innerHTML = `
+                    <div class="max-w-xl mx-auto bg-king-card border ${isVictory ? 'border-king-gold glow-gold' : 'border-red-600'} rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden">
+                        
+                        <div class="w-20 h-20 rounded-3xl ${isVictory ? 'bg-gradient-to-br from-king-gold to-amber-600 text-black' : 'bg-red-950 border border-red-500 text-red-500'} mx-auto flex items-center justify-center text-4xl font-black mb-6 shadow-xl">
+                            ${isVictory ? '👑' : '💀'}
+                        </div>
+
+                        <h2 class="text-3xl font-black ${isVictory ? 'text-king-gold' : 'text-red-500'} mb-2">
+                            ${isVictory ? '생존 성공 (SURVIVED)!' : '생존 실패 (GAME OVER)'}
+                        </h2>
+
+                        <p class="text-xs font-mono text-gray-400 mb-6">[${topic.title}]</p>
+
+                        <p class="text-sm text-gray-200 leading-relaxed mb-6 bg-king-bg p-4 rounded-2xl border border-king-border">
+                            ${finalMsg}
+                        </p>
+
+                        ${isVictory ? `
+                            <div class="grid grid-cols-2 gap-3 mb-6 font-mono text-xs">
+                                <div class="bg-king-bg p-3 rounded-xl border border-king-border">
+                                    <span class="text-gray-400 block">최종 생존 점수</span>
+                                    <strong class="text-lg font-black text-king-neonCyan">${score} pts</strong>
+                                </div>
+                                <div class="bg-king-bg p-3 rounded-xl border border-king-border">
+                                    <span class="text-gray-400 block">획득 훈장</span>
+                                    <strong class="text-sm font-bold text-king-gold">${topic.badge}</strong>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <div class="flex items-center gap-3">
+                            <button onclick="app.startQuiz('${topic.id}')" class="flex-1 py-3.5 rounded-2xl bg-king-gold text-black font-bold text-sm hover:bg-amber-300 transition shadow-lg">
+                                다시 도전하기
+                            </button>
+                            <button onclick="app.goHome()" class="flex-1 py-3.5 rounded-2xl bg-king-bg border border-king-border text-white font-bold text-sm hover:bg-king-card transition">
+                                메인 화면으로
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                lucide.createIcons();
+            }
+
+            openNicknameModal() {
+                audio.play('click');
+                document.getElementById('nicknameInput').value = this.state.nickname;
+                document.getElementById('nicknameModal').classList.remove('hidden');
+            }
+
+            closeNicknameModal() {
+                document.getElementById('nicknameModal').classList.add('hidden');
+            }
+
+            saveNickname() {
+                audio.play('click');
+                const val = document.getElementById('nicknameInput').value.trim();
+                if (val) {
+                    this.state.nickname = val;
+                    localStorage.setItem('sk_nickname', val);
+                    this.updateHeaderUI();
+                    this.closeNicknameModal();
+                    this.showToast("닉네임이 변경되었습니다.");
+                }
+            }
+
+            openStatsModal() {
+                audio.play('click');
+                this.updateStatsModalUI();
+                document.getElementById('statsModal').classList.remove('hidden');
+            }
+
+            closeStatsModal() {
+                document.getElementById('statsModal').classList.add('hidden');
+            }
+
+            switchModalTab(tab) {
+                audio.play('click');
+                this.state.activeModalTab = tab;
+                this.updateStatsModalUI();
+            }
+
+            updateStatsModalUI() {
+                let tier = "🥉 브론즈";
+                if (this.state.highScore >= 900) tier = "👑 킹 (최상위)";
+                else if (this.state.highScore >= 700) tier = "🥇 골드";
+                else if (this.state.highScore >= 400) tier = "🥈 실버";
+
+                document.getElementById('statRankTier').innerText = tier;
+                document.getElementById('statHighScore').innerText = `${this.state.highScore} pts`;
+                
+                const rate = this.state.attempts > 0 ? Math.round((this.state.wins / this.state.attempts) * 100) : 0;
+                document.getElementById('statSurvivalRate').innerText = `${rate}% (${this.state.attempts}회)`;
+
+                const tabLeaderboardBtn = document.getElementById('tabLeaderboardBtn');
+                const tabBadgesBtn = document.getElementById('tabBadgesBtn');
+                const content = document.getElementById('modalTabContent');
+
+                if (this.state.activeModalTab === 'leaderboard') {
+                    tabLeaderboardBtn.className = "py-2 px-4 border-b-2 border-king-gold text-king-gold font-bold";
+                    tabBadgesBtn.className = "py-2 px-4 border-b-2 border-transparent text-gray-400 hover:text-white font-bold";
+
+                    let listHtml = `<div class="space-y-2">`;
+                    this.state.leaderboard.forEach((item, idx) => {
+                        listHtml += `
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-king-bg border border-king-border text-xs font-mono">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-6 text-center font-black ${idx === 0 ? 'text-king-gold text-sm' : idx === 1 ? 'text-gray-300' : idx === 2 ? 'text-amber-600' : 'text-gray-500'}">
+                                        ${idx + 1}
+                                    </span>
+                                    <div>
+                                        <p class="font-bold text-white">${item.name}</p>
+                                        <p class="text-[10px] text-gray-500">${item.date}</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <strong class="text-king-neonCyan font-black">${item.score} pts</strong>
+                                    <span class="block text-[10px] text-king-gold font-bold">${item.title}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    listHtml += `</div>`;
+                    content.innerHTML = listHtml;
+
+                } else {
+                    tabBadgesBtn.className = "py-2 px-4 border-b-2 border-king-gold text-king-gold font-bold";
+                    tabLeaderboardBtn.className = "py-2 px-4 border-b-2 border-transparent text-gray-400 hover:text-white font-bold";
+
+                    let badgeHtml = `<div class="grid grid-cols-2 gap-3">`;
+                    SURVIVAL_TOPICS.forEach(topic => {
+                        const unlocked = this.state.unlockedBadges.includes(topic.id);
+                        badgeHtml += `
+                            <div class="p-3 rounded-xl border ${unlocked ? 'border-king-gold/60 bg-king-card' : 'border-king-border bg-king-bg/50 opacity-50'} text-xs font-mono">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-lg">${unlocked ? '🎖️' : '🔒'}</span>
+                                    <strong class="${unlocked ? 'text-king-gold' : 'text-gray-400'} font-bold">${topic.badge}</strong>
+                                </div>
+                                <p class="text-[10px] text-gray-400 leading-tight">${topic.badgeDesc}</p>
+                            </div>
+                        `;
+                    });
+                    badgeHtml += `</div>`;
+                    content.innerHTML = badgeHtml;
+                }
+            }
+        }
+
+        let app;
+        window.onload = function() {
+            app = new SurvivalApp();
+            app.init();
+        };
+    </script>
+</body>
+</html>
