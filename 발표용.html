@@ -1,0 +1,1815 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>생존왕 (SURVIVAL KING) - EXTREME HARDCORE EDITION</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        king: {
+                            bg: '#07090e',
+                            card: '#0f1420',
+                            cardHover: '#161e30',
+                            border: '#1a2336',
+                            gold: '#ffd700',
+                            neonCyan: '#00f0ff',
+                            neonPink: '#ff0055',
+                            neonGreen: '#00ff88',
+                            accent: '#3b82f6',
+                            kakao: '#FEE500',
+                            orange: '#ff7a00'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
+                        mono: ['Courier New', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+        body {
+            background-color: #07090e;
+            color: #f3f4f6;
+            font-family: 'Pretendard', sans-serif;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(255, 0, 85, 0.15) 0%, transparent 45%),
+                radial-gradient(circle at 80% 80%, rgba(255, 215, 0, 0.08) 0%, transparent 45%);
+            min-height: 100vh;
+        }
+
+        .glow-gold { box-shadow: 0 0 25px rgba(255, 215, 0, 0.35); }
+        .glow-pink { box-shadow: 0 0 30px rgba(255, 0, 85, 0.45); }
+        .glow-logo { box-shadow: 0 0 20px rgba(0, 240, 255, 0.4), 0 0 35px rgba(255, 215, 0, 0.25); }
+
+        .panel-card-img {
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), filter 0.6s ease;
+        }
+        .panel-card:hover .panel-card-img {
+            transform: scale(1.08);
+            filter: brightness(1.1);
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #07090e; }
+        ::-webkit-scrollbar-thumb { background: #1a2336; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #ff0055; }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .shimmer-text {
+            background: linear-gradient(90deg, #ffd700, #ffffff, #00f0ff, #ffd700);
+            background-size: 200% auto;
+            color: transparent;
+            -webkit-background-clip: text;
+            animation: shimmer 4s linear infinite;
+        }
+
+        @keyframes fillBar {
+            from { width: 0%; }
+            to { width: var(--target-width); }
+        }
+        .animate-bar { animation: fillBar 1.5s ease-out forwards; }
+    </style>
+</head>
+<body class="selection:bg-king-neonPink selection:text-white antialiased flex flex-col min-h-screen">
+
+    <!-- Background Music Audio Tag -->
+    <audio id="bgm" loop>
+        <source src="https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/Perpetual_Frontline.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- Global Navigation Header -->
+    <header class="border-b border-king-border bg-king-bg/95 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-[1800px] mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3.5 cursor-pointer group" onclick="app.goHome()">
+                <div class="w-14 h-14 rounded-2xl bg-king-card border-2 border-king-gold/70 flex items-center justify-center p-1.5 glow-logo group-hover:scale-105 transition overflow-hidden shrink-0 relative">
+                    <img src="https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EB%A1%9C%EA%B3%A0%20%EC%88%98%EC%A0%95%EC%95%88.jpg" onerror="this.src='https://placehold.co/120x120/101420/ffd700?text=LOGO'" alt="생존왕 로고" class="w-full h-full object-cover rounded-xl">
+                </div>
+                <div>
+                    <h1 class="font-black text-xl md:text-2xl tracking-wider text-white flex items-center gap-2">
+                        생존왕 <span class="text-[10px] px-2 py-0.5 rounded bg-red-600/40 text-red-400 border border-red-500/50 font-mono font-bold">EXTREME HARDCORE</span>
+                    </h1>
+                    <p class="text-xs text-gray-400 hidden sm:block">5초 제한시간 & Firebase 실시간 글로벌 랭킹 시스템</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="app.openNicknameModal()" class="p-2 px-3 rounded-xl bg-king-card border border-king-gold/50 text-king-gold hover:border-king-gold transition flex items-center gap-1.5 text-xs font-mono">
+                    <i data-lucide="user" class="w-4 h-4 text-king-gold"></i>
+                    <span id="headerNickname" class="font-bold text-white">생존자</span>
+                    <i data-lucide="edit-3" class="w-3 h-3 text-gray-400"></i>
+                </button>
+
+                <button id="soundToggleBtn" onclick="app.toggleSound()" class="p-2 rounded-xl bg-king-card border border-king-border text-gray-300 hover:text-king-gold transition flex items-center gap-1.5 text-xs font-mono">
+                    <i data-lucide="volume-2" class="w-4 h-4 text-king-gold" id="soundIcon"></i>
+                    <span id="soundLabel" class="hidden md:inline">사운드 ON</span>
+                </button>
+
+                <button onclick="app.openStatsModal()" class="p-2 rounded-xl bg-king-card border border-king-border text-gray-300 hover:text-king-gold transition flex items-center gap-1.5 text-xs font-mono">
+                    <i data-lucide="trophy" class="w-4 h-4 text-king-gold"></i>
+                    <span class="hidden md:inline">랭킹 & 업적</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- WRAPPER WITH LEFT & RIGHT SIDEBAR BANNERS FOR LARGE SCREENS -->
+    <div class="flex-1 max-w-[1800px] w-full mx-auto px-4 py-6 md:py-8 flex justify-center items-start gap-6 relative">
+        
+        <!-- LEFT SIDEBAR AD BANNER -->
+        <aside class="hidden xl:flex flex-col items-center sticky top-24 w-[280px] h-auto bg-king-card border-2 border-king-gold/50 rounded-2xl p-2.5 shrink-0 shadow-2xl text-center justify-start overflow-hidden group hover:border-king-gold transition-all duration-300">
+            <a href="https://jeju-ai-bootcamp-579712386214.asia-northeast3.run.app/" target="_blank" rel="noopener noreferrer" class="w-full flex flex-col items-center">
+                <div class="w-full flex items-center justify-between border-b border-king-border pb-1.5 mb-2">
+                    <span class="text-[10px] font-mono text-king-gold uppercase tracking-widest font-bold flex items-center gap-1">
+                        <i data-lucide="sparkles" class="w-3 h-3 text-king-gold"></i> SPONSORED AD
+                    </span>
+                    <span class="text-[9px] bg-red-600/30 text-red-400 px-1.5 py-0.5 rounded font-mono">SPECIAL</span>
+                </div>
+                
+                <div class="w-full rounded-xl overflow-hidden bg-black/80 border border-king-border">
+                    <img src="https://github.com/wlgjs53/dfdfdfwewewew/blob/main/cc5af9ec-7820-46a5-858e-0518e80af1fb.jpeg?raw=true" 
+                         alt="좌측 광고 배너" 
+                         class="w-full h-auto block object-contain group-hover:scale-102 transition duration-300">
+                </div>
+
+                <div class="w-full pt-2 mt-2 border-t border-king-border">
+                    <p class="text-[11px] font-bold text-white tracking-wide">SURVIVAL KING SPONSORED</p>
+                </div>
+            </a>
+        </aside>
+
+        <!-- MAIN APP DISPLAY CONTAINER -->
+        <main id="appContainer" class="flex-1 max-w-5xl w-full min-w-0">
+            <!-- Injected dynamically via JS -->
+        </main>
+
+        <!-- RIGHT SIDEBAR: 실시간 생존자 현황 배너 -->
+        <aside class="hidden xl:flex flex-col sticky top-24 w-[280px] bg-king-card border-2 border-king-orange rounded-2xl p-4 shrink-0 shadow-[0_0_20px_rgba(255,122,0,0.15)] overflow-hidden font-sans text-gray-200">
+            
+            <!-- 1. 대한민국 생존 현황 -->
+            <div class="pb-4 mb-4 border-b border-dashed border-king-orange/60">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                    <h2 class="text-sm font-black text-king-orange tracking-tight">대한민국 생존 현황</h2>
+                </div>
+                <div class="flex justify-between items-center text-xs mb-3">
+                    <span class="text-gray-400">현재 생존자</span>
+                    <span class="font-bold text-white font-mono text-sm">4,892,104 <span class="text-[10px] text-gray-400">명</span> <span class="text-red-500 text-[10px]">(-124)</span></span>
+                </div>
+                
+                <!-- 테마별 바 그래프 -->
+                <div class="bg-black/60 border border-king-border rounded-xl p-3 space-y-2.5">
+                    <div class="text-[10px] text-gray-400 text-right font-mono">주요 테마별 생존율</div>
+                    
+                    <div>
+                        <div class="flex justify-between text-[11px] mb-1">
+                            <span class="text-gray-300">단톡방 험담 대참사</span>
+                            <span class="font-bold text-king-neonPink">5.2%</span>
+                        </div>
+                        <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
+                            <div class="h-full bg-king-neonPink animate-bar rounded-full shadow-[0_0_8px_rgba(255,0,85,0.4)]" style="--target-width: 5.2%;"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-[11px] mb-1">
+                            <span class="text-gray-300">농땡이 생존왕</span>
+                            <span class="font-bold text-king-neonCyan">12.1%</span>
+                        </div>
+                        <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
+                            <div class="h-full bg-king-neonCyan animate-bar rounded-full shadow-[0_0_8px_rgba(0,240,255,0.4)]" style="--target-width: 12.1%;"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-[11px] mb-1">
+                            <span class="text-gray-300">초미세먼지 3000ppm</span>
+                            <span class="font-bold text-king-neonPink">0.05%</span>
+                        </div>
+                        <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
+                            <div class="h-full bg-king-neonPink animate-bar rounded-full shadow-[0_0_8px_rgba(255,0,85,0.4)]" style="--target-width: 3%;"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-[11px] mb-1">
+                            <span class="text-gray-300">유럽 소매치기 생존</span>
+                            <span class="font-bold text-king-neonGreen">9.8%</span>
+                        </div>
+                        <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
+                            <div class="h-full bg-king-neonGreen animate-bar rounded-full shadow-[0_0_8px_rgba(0,255,136,0.4)]" style="--target-width: 9.8%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 내 생존 랭킹 & 현황 -->
+            <div class="pb-4 mb-4 border-b border-dashed border-king-orange/60">
+                <div class="flex items-center gap-1.5 mb-2.5">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-king-orange"></i>
+                    <h2 class="text-xs font-black text-king-orange uppercase tracking-wider">MY SURVIVAL STATUS</h2>
+                </div>
+                <div class="space-y-1.5 text-xs font-mono">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">내 랭킹</span>
+                        <span id="sidebarUserRank" class="font-bold text-white">동기화 중...</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">생존 상태</span>
+                        <span class="font-bold text-king-neonGreen">최적</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">연속 생존일</span>
+                        <span class="font-bold text-king-orange">Day +142</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 오늘의 극악 추천 테마 -->
+            <div>
+                <div class="flex items-center gap-1.5 mb-2">
+                    <i data-lucide="flame" class="w-4 h-4 text-king-neonPink"></i>
+                    <h2 class="text-xs font-black text-king-orange">오늘의 극악 추천 테마</h2>
+                </div>
+                <div class="bg-black/60 border border-king-border rounded-xl p-3 text-center space-y-1.5">
+                    <div class="text-xs font-bold text-white">[신규] 단톡방 험담 대참사</div>
+                    <div class="text-[11px] text-gray-400">난이도: <span class="text-king-neonPink font-bold">★★★★☆</span> (극악)</div>
+                    <div class="text-[11px] text-gray-400 font-mono">클리어율: 5.2%</div>
+                    <button onclick="app.startTopic('group_chat_disaster')" class="w-full mt-2 py-2 bg-transparent border border-king-orange text-king-orange hover:bg-king-orange hover:text-black transition rounded-lg text-xs font-bold shadow-md">
+                        도전하기
+                    </button>
+                </div>
+            </div>
+
+        </aside>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-king-border bg-king-bg py-6 text-center text-xs text-gray-500 font-mono">
+        <div class="max-w-6xl mx-auto px-4 flex justify-center items-center">
+            <p>© 2026 SURVIVAL KING EXTREME EDITION. Powered by Firebase Global Realtime DB.</p>
+        </div>
+    </footer>
+
+    <!-- Toast Notification Popup -->
+    <div id="toast" class="fixed bottom-6 right-6 px-4 py-3 rounded-xl bg-king-card border border-king-gold text-white text-sm shadow-2xl flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <i data-lucide="bell" class="w-4 h-4 text-king-gold"></i>
+        <span id="toastMsg">알림 메시지</span>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedbackModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-king-card border border-king-gold rounded-2xl max-w-md w-full p-6 relative shadow-2xl text-center space-y-4">
+            <div id="feedbackIconContainer" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto border-2">
+                <i id="feedbackIcon" data-lucide="info" class="w-8 h-8"></i>
+            </div>
+            
+            <h3 id="feedbackTitle" class="text-xl font-black text-white">결과 피드백</h3>
+            
+            <div id="feedbackStatChanges" class="flex justify-center gap-4 text-sm font-mono font-bold">
+                <span id="feedbackHp" class="px-3 py-1 rounded-lg bg-red-950/50 border border-red-500/40 text-red-400">HP: 0</span>
+                <span id="feedbackMental" class="px-3 py-1 rounded-lg bg-cyan-950/50 border border-cyan-500/40 text-king-neonCyan">Mental: 0</span>
+            </div>
+
+            <div class="bg-king-bg p-4 rounded-xl border border-king-border text-left">
+                <p id="feedbackText" class="text-sm text-gray-200 leading-relaxed font-medium">피드백 내용이 여기에 표기됩니다.</p>
+            </div>
+
+            <button onclick="app.closeFeedbackModal()" class="w-full py-3.5 rounded-xl bg-king-gold text-black font-extrabold text-sm hover:bg-amber-300 transition shadow-lg">
+                다음으로 진행
+            </button>
+        </div>
+    </div>
+
+    <!-- Nickname Settings Modal -->
+    <div id="nicknameModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-king-card border border-king-gold rounded-2xl max-w-sm w-full p-6 relative shadow-2xl">
+            <button onclick="app.closeNicknameModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                <i data-lucide="user-check" class="w-5 h-5 text-king-gold"></i> 사용자 프로필 설정
+            </h3>
+            <p class="text-xs text-gray-400 mb-4">글로벌 리더보드 및 생존 결과에 표시될 닉네임입니다.</p>
+
+            <input type="text" id="nicknameInput" maxlength="12" placeholder="닉네임 입력 (최대 12자)" class="w-full px-4 py-3 rounded-xl bg-king-bg border border-king-border text-white text-sm mb-4 focus:outline-none focus:border-king-gold font-bold">
+            
+            <button onclick="app.saveNickname()" class="w-full py-3 rounded-xl bg-king-gold text-black font-bold text-sm hover:bg-amber-300 transition shadow-lg">
+                닉네임 저장하기
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats, Rank & Leaderboard Modal (Modified: Removed 완주율 파트) -->
+    <div id="statsModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-king-card border border-king-border rounded-2xl max-w-lg w-full p-6 relative shadow-2xl max-h-[90vh] flex flex-col">
+            <button onclick="app.closeStatsModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            
+            <div class="mb-4">
+                <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                    <i data-lucide="trophy" class="w-5 h-5 text-king-gold"></i> Firebase 실시간 글로벌 랭킹 & 업적
+                </h3>
+                <p class="text-xs text-gray-400">전 세계 생존자들과 실시간으로 경쟁하는 클라우드 리더보드</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-4 bg-king-bg p-3.5 rounded-xl border border-king-border text-center">
+                <div>
+                    <p class="text-[10px] text-gray-400">나의 랭크 티어</p>
+                    <p id="statRankTier" class="text-base font-black text-king-gold font-mono">🥉 브론즈</p>
+                </div>
+                <div>
+                    <p class="text-[10px] text-gray-400">나의 누적 최고 점수</p>
+                    <p id="statHighScore" class="text-base font-black text-king-neonCyan font-mono">0 pts</p>
+                </div>
+            </div>
+
+            <div class="flex border-b border-king-border mb-4 font-mono text-xs">
+                <button id="tabLeaderboardBtn" onclick="app.switchModalTab('leaderboard')" class="py-2 px-4 border-b-2 border-king-gold text-king-gold font-bold">
+                    🏆 글로벌 랭킹 TOP 10 (실시간)
+                </button>
+                <button id="tabBadgesBtn" onclick="app.switchModalTab('badges')" class="py-2 px-4 border-b-2 border-transparent text-gray-400 hover:text-white font-bold">
+                    🎖️ 보유 훈장 (19종)
+                </button>
+            </div>
+
+            <div id="modalTabContent" class="flex-1 overflow-y-auto pr-1">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase & Game Engine Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Configuration using requested API Key
+        const firebaseConfig = {
+            apiKey: "AIzaSyBl_71HPFidOQdbiFZ7FYxLof6UpK3WmY0",
+            authDomain: "survival-king-global.firebaseapp.com",
+            projectId: "survival-king-global",
+            storageBucket: "survival-king-global.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef1234567890"
+        };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'survival-king-extreme-v1';
+        
+        let appInstance, db, auth, currentUser = null;
+        try {
+            appInstance = initializeApp(firebaseConfig);
+            db = getFirestore(appInstance);
+            auth = getAuth(appInstance);
+        } catch (e) {
+            console.error("Firebase Init Error:", e);
+        }
+
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+            }
+
+            play(type) {
+                if (!this.enabled) return;
+                try {
+                    this.init();
+                    if (this.ctx.state === 'suspended') {
+                        this.ctx.resume();
+                    }
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    if (type === 'click') {
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(700, now);
+                        osc.frequency.exponentialRampToValueAtTime(350, now + 0.05);
+                        gain.gain.setValueAtTime(0.12, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                        osc.start(now);
+                        osc.stop(now + 0.05);
+                    } else if (type === 'correct') {
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(523.25, now);
+                        osc.frequency.setValueAtTime(659.25, now + 0.08);
+                        osc.frequency.setValueAtTime(783.99, now + 0.16);
+                        gain.gain.setValueAtTime(0.2, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                        osc.start(now);
+                        osc.stop(now + 0.3);
+                    } else if (type === 'damage') {
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(250, now);
+                        osc.frequency.linearRampToValueAtTime(60, now + 0.25);
+                        gain.gain.setValueAtTime(0.3, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                        osc.start(now);
+                        osc.stop(now + 0.25);
+                    } else if (type === 'gameover') {
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(350, now);
+                        osc.frequency.linearRampToValueAtTime(80, now + 0.7);
+                        gain.gain.setValueAtTime(0.35, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.7);
+                        osc.start(now);
+                        osc.stop(now + 0.7);
+                    } else if (type === 'victory') {
+                        const notes = [523.25, 659.25, 783.99, 1046.50];
+                        notes.forEach((freq, idx) => {
+                            const noteOsc = this.ctx.createOscillator();
+                            const noteGain = this.ctx.createGain();
+                            noteOsc.connect(noteGain);
+                            noteGain.connect(this.ctx.destination);
+                            noteOsc.type = 'sine';
+                            noteOsc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                            noteGain.gain.setValueAtTime(0.2, now + idx * 0.1);
+                            noteGain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.1 + 0.35);
+                            noteOsc.start(now + idx * 0.1);
+                            noteOsc.stop(now + idx * 0.1 + 0.35);
+                        });
+                    }
+                } catch(e) {
+                    console.error("Audio Engine Error:", e);
+                }
+            }
+        }
+
+        const audio = new SoundEngine();
+
+        // Image constants maintaining original visual assets
+        const IMG_MAIN_HERO = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EB%A9%94%EC%9D%B8%20%EC%9D%B4%EB%AF%B8%EC%A7%80.png";
+        const IMG_SUBWAY = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EC%9B%94%EC%9A%94%EC%9D%BC%20%EC%B6%9C%EA%B7%BC%EA%B8%B8.png";
+        const IMG_INTROVERT = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EA%B7%B9I(%EB%82%B4%ED%96%A5%EC%9D%B8).jpg";
+        const IMG_BUDGET = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EC%9E%94%EA%B3%A0%2010%EB%A7%8C%EC%9B%90.png";
+        const IMG_ASYLUM = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EC%A0%95%EC%8B%A0%EB%B3%91%EC%9B%90%20%ED%83%88%EC%B6%9C.png";
+        const IMG_BOSS = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EB%B9%8C%EB%9F%B0%20%EC%83%81%EC%82%AC%20%EB%B0%91%EC%97%90%EC%84%9C%20%EC%82%B4%EC%95%84%EB%82%A8%EA%B8%B0.png";
+        const IMG_VOLCANO = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EB%B0%B1%EB%91%90%EC%82%B0%20%EB%8C%80%ED%8F%AD%EB%B0%9C%2072%EC%8B%9C%EA%B0%84.png";
+        const IMG_ZOMBIE = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/K-%EC%95%84%ED%8C%8C%ED%8A%B8%20%EC%A2%80%EB%B9%84%20%EC%95%84%ED%8F%AC%EC%B9%BC%EB%A6%BD%EC%8A%A4%20%EC%82%B4%EC%95%84%EB%82%A8%EA%B8%B0.png";
+        const IMG_SHARK = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EC%83%81%EC%96%B4%20%EC%B6%9C%EB%AA%B0%20%EC%88%98%EC%97%AD.png";
+        const IMG_AMAZON = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EC%A0%95%EA%B8%80%20%EC%86%8D%EC%97%90%EC%84%9C%20%EC%82%B4%EC%95%84%EB%82%A8%EA%B8%B0.png";
+        const IMG_KOREAN_GHOST = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%ED%95%9C%EA%B5%AD%EA%B3%A0%EC%A0%84%26%EB%8F%84%EC%8B%9C%EA%B4%B4%EB%8B%B4.png";
+        const IMG_HORROR_MOVIE = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EA%B3%B5%ED%8F%AC%EC%98%81%ED%99%94%20%EC%86%8D%20%EC%A3%BC%EC%9D%B8%EA%B3%B5.png";
+        const IMG_FAKE_NEWS = "https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EA%B0%80%EC%A7%9C%EB%89%B4%EC%8A%A4.png";
+        const IMG_RESTAURANT = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80";
+        const IMG_TEACHER = "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=600&q=80";
+        const IMG_EUROPE = "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=600&q=80";
+        const IMG_FIRST_AID = "https://images.unsplash.com/photo-1516574187841-cb9cc2ca948b?auto=format&fit=crop&w=600&q=80";
+        const IMG_CHAT_DISASTER = "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=600&q=80";
+        const IMG_SLACKING = "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=600&q=80";
+        const IMG_DUST_STORM = "https://images.unsplash.com/photo-1534088568595-a066f410bcda?auto=format&fit=crop&w=600&q=80";
+
+        const SURVIVAL_TOPICS = [
+            {
+                id: 'group_chat_disaster',
+                category: 'life',
+                title: '단톡방 험담 대참사 생존기',
+                badge: '위기관리 위장 마스터 훈장',
+                difficulty: 4.8,
+                time: '5초/문항',
+                image: IMG_CHAT_DISASTER,
+                desc: '동기들과 뒷담화하려다 회사 전체 대관 단톡방에 부장님 뒷담을 잘못 전송했다! 빛의 속도로 일어나는 읽음 카운트 감소와 사회적 매장 위기 속에서 살아남아라!',
+                icon: 'message-square-warning',
+                badgeDesc: '빛의 속도로 일어난 메시지 오전송 참사를 기적 같은 임기응변과 위장술로 극복함.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 전체 단톡방에 부장님 뒷담 오전송 인지',
+                        narrative: '"진짜 개노답 틀딱..." 50명 참석 회사 단톡방에 메시지를 날렸다! 5초 내 당신의 즉각 행동은?',
+                        options: [
+                            { text: '5초 안에 잽싸게 "모든 대화상대에게 삭제" 버튼을 광속 클릭한다.', hp: -5, mental: -10, feedback: '카톡 삭제 기능으로 알림만 남고 내용은 가려짐! 식은땀 소모.' },
+                            { text: '핸드폰을 전원 Off하고 책상 밑에 숨는다.', hp: -50, mental: -60, feedback: '대화방 48명이 이미 다 읽고 캡처 완료!' },
+                            { text: '"앗 죄송합니다 잘못 올렸습니다"라고 곧바로 사과를 남긴다.', hp: -40, mental: -50, feedback: '본인 스스로 험담을 인정해 뺴도 박도 못하게 됨!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 삭제 후 남은 "삭제된 메시지입니다"에 대한 추궁',
+                        narrative: '부장님: "방금 O사원이 올렸다가 지운 글 뭐야? 다들 읽은 것 같은데?"',
+                        options: [
+                            { text: '"친구 단톡방에 보낼 요약 밈 짤인데 급하게 쳐서 오타가 났습니다! 죄송합니다!"', hp: -10, mental: -10, feedback: '자연스러운 다른 카톡방 오발송 핑계로 서둘러 무마 시도!' },
+                            { text: '"부장님 이야기 한 건데요 왜요?"라고 맞서 싸운다.', hp: -80, mental: -90, feedback: '회사 내 즉시 징계 절차 및 왕따 확정.' },
+                            { text: '아무 말도 안 하고 단톡방을 나간다.', hp: -60, mental: -70, feedback: '도망친 것으로 간주되어 직장 상사 및 팀 전체에 요주의 인물 찍힘!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 비밀스럽게 날아오는 동기들의 1:1 카톡 폭격',
+                        narrative: '동기 A: "야 너 미쳤냐? 캡처본 찌라시 단톡에 다 도는 중인데 어떡함?"',
+                        options: [
+                            { text: '"누군가 제 계정 해킹이나 단톡 짤 합성한 것 같다고 루머 차단할 테니 일단 언급 자제해 줘" 요청.', hp: -10, mental: -15, feedback: '확산 억제를 유도하여 추가 캡처 유포 통제!' },
+                            { text: '동기 단톡방에 "나 회사 그만둘 거다"라며 울부짖는다.', hp: -30, mental: -40, feedback: '멘탈 파괴 및 추가 캡처 유출!' },
+                            { text: '모든 동기들의 카톡을 차단하고 폰을 끈다.', hp: -40, mental: -50, feedback: '상황 파악 불능 및 외부 고립.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 부장님의 기습 1:1 면담 호출',
+                        narrative: '⚠️ 부장님: "O사원, 잠시 5층 회의실로 들어와라."',
+                        options: [
+                            { text: '차분히 정장 옷매무새를 가다듬고 음성 녹음기를 켠 후 정중하고 당당하게 입장.', hp: -10, mental: -15, feedback: '녹음기 확보로 혹시 모를 언어폭력 방어 준비 완료!' },
+                            { text: '울면서 회의실 바닥에 무릎을 꿇고 빈다.', hp: -50, mental: -60, feedback: '자존감 완벽 상실 및 약점 잡힘!' },
+                            { text: '아프다고 거짓말하고 조퇴 신청서를 제출한다.', hp: -40, mental: -50, feedback: '회피형 인성으로 평가되어 인사평가 감점!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 회의실 안 부장님의 취조와 캡처 화면 추궁',
+                        narrative: '부장님이 출력된 캡처 화면을 내밀며 "이거 본인 지칭한 거 맞지?"라고 자백을 요구한다.',
+                        options: [
+                            { text: '"최근 스트레스로 웹소설 악당 대사를 기입하다가 실수한 것입니다. 상사님을 지칭한 적 절대 없습니다!"', hp: -10, mental: -20, feedback: '창의적인 소설/밈 대사 핑계로 직격탄 회피!' },
+                            { text: '"네 맞습니다 부장님 평소에 너무하셨잖아요!" 폭발.', hp: -70, mental: -80, feedback: '즉시 시말서 및 권고사직 위기!' },
+                            { text: '아무 말도 안 하고 눈을 깔고 묵비권을 행사한다.', hp: -40, mental: -40, feedback: '암묵적 인정을 한 꼴이 됨.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 퇴근 후 사내 블라인드 앱 기습 익명 폭로글 게시',
+                        narrative: '블라인드에 "[속보] OO팀 신입 단톡방에 상사 욕설 오발송 참사 ㅋㅋㅋ" 글이 올라옴!',
+                        options: [
+                            { text: '블라인드 게시글 신고 및 "허위 사실 유포 시 법적 대응" 댓글 작성 후 신경 끄기.', hp: -5, mental: -15, feedback: '추가 화제성을 차단하고 멘탈 방어!' },
+                            { text: '익명 댓글로 "작성자 너 누구냐?"라며 싸운다.', hp: -40, mental: -60, feedback: '댓글 싸움으로 인기글 1위 등극!' },
+                            { text: '밤새 블라인드 댓글을 정독하며 울어 눈이 붓는다.', hp: -30, mental: -50, feedback: '다음 날 출근 불능 피로 누적.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 다음 날 아침 출근길 부서원들의 차가운 시선',
+                        narrative: '사무실 문을 열자마자 모든 부서원들이 수군거리며 당신을 바라본다.',
+                        options: [
+                            { text: '자연스럽게 음료수를 사 들고 와 "어제 소란을 피워 죄송합니다!" 밝게 인사하며 정면 돌파.', hp: -10, mental: -10, feedback: '당당하고 쿨한 태도로 소문 유효기간 단축!' },
+                            { text: '고개를 숙이고 쥐죽은 듯이 제자리로 기어 들어간다.', hp: -30, mental: -30, feedback: '먹잇감 취급 당하며 사내 분위기 경색.' },
+                            { text: '화장실에 들어가서 2시간 동안 나오지 않는다.', hp: -40, mental: -50, feedback: '무단 이탈로 부장님 재호출.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 분위기 반전을 위한 극적 회식과 이미지 쇄신',
+                        narrative: '부장님이 "어제 일은 해프닝으로 넘어가자"며 회식을 제안한다.',
+                        options: [
+                            { text: '회식 자리에서 싹싹하게 흑기사도 자처하고 훌륭한 입담으로 분위기를 반전시킨다.', hp: +5, mental: +20, feedback: '위기를 기회로 바꿔 직장 생존왕 등극 성공!' },
+                            { text: '회식에서 술을 폭음하고 부장님 옷에 토한다.', hp: -80, mental: -90, feedback: '완벽한 사회적 퇴출!' },
+                            { text: '회식을 거절하고 칼퇴근한다.', hp: -30, mental: -40, feedback: '부장님 앙금 영구 지속.' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'slacking_boss',
+                category: 'life',
+                title: '상사 눈 피해 농땡이 생존왕',
+                badge: '월급루팡 마스터 훈장',
+                difficulty: 4.7,
+                time: '5초/문항',
+                image: IMG_SLACKING,
+                desc: '월요일 오전 10시! 상사의 등 뒤 감시망, 거울 모니터링, 키보드 매크로 소리 연출! 5초 내 완벽한 월급루팡 기술을 발휘해 안 걸리고 퇴근하라!',
+                icon: 'eye-off',
+                badgeDesc: '상사의 매서운 감시 눈초리를 신들린 월루 기술과 연출로 완벽히 속임.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 모니터 웹쇼핑 중 상사의 기습 다가옴',
+                        narrative: '신발 쇼핑 중 뒤에서 상사의 발소리가 다가온다! 5초 내 당신의 화면 전환은?',
+                        options: [
+                            { text: '단축키 [Alt + Tab] 또는 [Win + D]를 정교하게 눌러 엑셀 업무 화면으로 즉시 전환.', hp: 0, mental: +5, feedback: '빛의 속도로 업무 전환 성공!' },
+                            { text: '마우스로 X 버튼을 허둥지둥 누르다 화면이 멈춘다.', hp: -40, mental: -50, feedback: '쇼핑몰 결제창을 상사에게 들킴!' },
+                            { text: '모니터 전원 버튼을 꺼버리고 모니터를 멍하니 본다.', hp: -30, mental: -40, feedback: '"왜 모니터 끄고 멍때리나?" 추궁당함.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 자리에 없어도 일하는 척 키보드 소리 연출',
+                        narrative: '화장실에서 30분간 인스타 릴스를 봐야 시한다. 책상이 비어 보이지 않으려면?',
+                        options: [
+                            { text: '모니터 위에 굵은 서류 봉투와 필기구를 펼쳐놓고 "잠시 미팅 중" 메모를 살짝 놓는다.', hp: +5, mental: +5, feedback: '완벽한 외근/미팅 연출 성공!' },
+                            { text: '키보드 위에 텀블러를 올려놓아 연속 입력하게 만든다.', hp: -40, mental: -50, feedback: '메모장에 "zzzzzzzz" 10만자 입력되어 들통!' },
+                            { text: '아무런 조치 없이 폰만 들고 나간다.', hp: -20, mental: -30, feedback: '상사가 "O사원 어디 감?" 찾기 시작.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 탕비실에서 스마트폰 게임 중 상사 입장',
+                        narrative: '⚠️ 탕비실 구석에서 게임 중 상사가 커피를 타러 기습 방문!',
+                        options: [
+                            { text: '스마트폰을 즉시 포켓에 넣고 "부장님 커피 한 잔 타드릴까요?" 친절 응대.', hp: 0, mental: +5, feedback: '위기 기회 전환! 접대 모드 발동.' },
+                            { text: '폰을 등 뒤로 숨기고 당황해서 손을 떤다.', hp: -30, mental: -40, feedback: '수상한 행동으로 폰 제출 요구당함!' },
+                            { text: '탕비실 밖으로 전속력으로 뛰어 나간다.', hp: -50, mental: -60, feedback: '상사와 부딪혀 핫커피 쏟음!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 에어팟 끼고 유튜브 청취 중 기습 질문',
+                        narrative: '노이즈 캔슬링 에어팟으로 유머 영상을 보던 중 상사가 옆에서 말을 건다!',
+                        options: [
+                            { text: '자연스럽게 머리를 매만지며 한쪽 에어팟을 뺴고 "네 부장님! 보고서 말씀이십니까?"', hp: -5, mental: +5, feedback: '순발력 넘치는 질문 되받아치기!' },
+                            { text: '못 듣고 빵 터져서 "키득키득" 웃는다.', hp: -60, mental: -70, feedback: '상사가 보고서 내밀다 미쳤냐고 소리침!' },
+                            { text: '"아 깜짝이야!" 하면서 에어팟을 바닥에 떨어뜨린다.', hp: -30, mental: -40, feedback: '농땡이 현장 즉시 발각.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 점심시간 후 식곤증 쏟아지는 오후 2시',
+                        narrative: '눈꺼풀이 근육 마비급으로 무겁다. 상사 직전 자리에서 안 걸리고 잘 수 있는 방법은?',
+                        options: [
+                            { text: '손에 펜을 쥐고 고개를 약간 숙인 채 서류를 보는 듯한 각도로 15분 수면.', hp: +10, mental: +10, feedback: '고뇌하는 인재 포즈로 수면 성공!' },
+                            { text: '책상에 머리를 박고 엎드려서 코를 곤다.', hp: -50, mental: -60, feedback: '상사가 등짝 스매싱 날림!' },
+                            { text: '의자를 뒤로 끝까지 젖히고 눕는다.', hp: -70, mental: -80, feedback: '사무실 전체 관종 등극 및 징계.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 메신저 루팡 중 상사의 화면 공유 요구',
+                        narrative: '카톡으로 친구와 수다 떨던 중 상사가 "O사원, 지금 화면 그대로 회의실 빔프로젝터에 띄워봐."',
+                        options: [
+                            { text: '잽싸게 [전체 화면] 대신 특정 [보고서 창]만 지정하여 공유한다.', hp: 0, mental: +10, feedback: '창 지정 공유 기능으로 비밀 유지!' },
+                            { text: '전체 화면 공유를 눌러 개인 카톡창을 빔프로젝터에 연출한다.', hp: -80, mental: -90, feedback: '상사 뒷담 카톡이 대형 스크린에 방출!' },
+                            { text: '컴퓨터 랜선을 뽑아버린다.', hp: -40, mental: -40, feedback: '고의적 업무 방해 의심.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 아무것도 안 했는데 "수고했어" 칭찬받기',
+                        narrative: '하루 종일 딴짓만 했는데 상사가 "오늘 고생 많았지?"라며 어깨를 두드린다.',
+                        options: [
+                            { text: '"아닙니다! 아직 부족하지만 팀을 위해 더 정진하겠습니다" 겸손 코스프레.', hp: +5, mental: +10, feedback: '완벽한 이미지 구축 성공!' },
+                            { text: '"저 오늘 아무것도 안 했는데요?" 사실 고백.', hp: -30, mental: -50, feedback: '상사의 눈빛이 차갑게 변함.' },
+                            { text: '비웃음을 지으며 밖으로 나간다.', hp: -40, mental: -50, feedback: '건방진 사원으로 낙인.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 17:59:50 칼퇴근 버튼 태그',
+                        narrative: '18시 정각 10초 전! 상사가 "O사원 잠시 이야기 좀..." 호출하려 함!',
+                        options: [
+                            { text: '가방을 이미 메고 "부장님 출장/외근 건으로 빠르게 이동하겠습니다!" 인사 후 18:00 태그.', hp: +10, mental: +20, feedback: '월급루팡 완벽 생환! 칼퇴근 달성!' },
+                            { text: '다시 자리에 앉아 2시간 동안 잡담을 듣는다.', hp: -30, mental: -60, feedback: '야근 당하고 멘탈 파괴.' },
+                            { text: '상사 말을 무시하고 달려서 나간다.', hp: -40, mental: -50, feedback: '다음 날 시말서 확정.' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'dust_storm_3000',
+                category: 'disaster',
+                title: '초미세먼지 3000ppm 폭풍',
+                badge: '청정 호흡기 생환자 훈장',
+                difficulty: 5.0,
+                time: '5초/문항',
+                image: IMG_DUST_STORM,
+                desc: '시야 10cm, 초미세먼지(PM2.5) 3000ppm의 암흑 황사 폭풍! 가스마스크, 방진필터, 창문 문풍지 밀봉 수칙으로 살아남아라!',
+                icon: 'wind',
+                badgeDesc: '3000ppm 초미세먼지 폭풍 속에서 차분한 방재 지식으로 폐 건강 사수.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 붉은 미세먼지 장벽의 도심 기습',
+                        narrative: '창밖이 순식간에 노란빛에서 핏빛으로 바뀌며 초미세먼지 3000ppm 경보 발령!',
+                        options: [
+                            { text: '즉시 KF94/방진 2급 마스크를 밀착 착용하고 안경/고글로 안구를 보호한다.', hp: +5, mental: +5, feedback: '호흡기 차단 완벽 정석 대처!' },
+                            { text: '일반 얇은 비말 마스크 한 장만 쓴다.', hp: -50, mental: -40, feedback: '미세먼지가 폐포까지 침투해 호흡 곤란!' },
+                            { text: '손수건으로 입만 대충 가리고 구경한다.', hp: -60, mental: -50, feedback: '눈과 목에 극심한 통증 발생!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 실내 유입을 막기 위한 창문 봉쇄',
+                        narrative: '창문 틈새로 황색 미세먼지가 연기처럼 스며들기 시작한다!',
+                        options: [
+                            { text: '분무기로 물을 뿌려 먼지를 침전시키고 분풍지와 테이프로 틈새 완전 봉쇄.', hp: +5, mental: +5, feedback: '실내 미세먼지 농도 급격히 감소!' },
+                            { text: '공기청정기만 강풍으로 켜두고 창문을 방치한다.', hp: -50, mental: -50, feedback: '필터가 3분 만에 마비되어 정지!' },
+                            { text: '환기해야 한다며 창문을 조금 열어둔다.', hp: -70, mental: -80, feedback: '실내 미세먼지 2000ppm 돌파!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 도로 위 차량 에어컨/환기 모드 선택',
+                        narrative: '⚠️ 대피 차를 타고 이동 중! 외부 가시거리가 1m 이하로 떨어졌다.',
+                        options: [
+                            { text: '비상등을 켜고 속도를 20km 이하로 줄이며 공기 순환을 "내부 순환" 모드로 고정.', hp: -5, mental: +5, feedback: '차량 내부 청정 유지 및 안전 운행!' },
+                            { text: '외기 유입 모드로 에어컨을 강하게 켠다.', hp: -60, mental: -50, feedback: '차 안으로 미세먼지가 쏟아져 들어옴!' },
+                            { text: '창문을 열고 머리를 내밀어 길을 본다.', hp: -80, mental: -80, feedback: '안구 화상 및 호흡기 급성 마비!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 정전으로 인한 공기청정기 마비',
+                        narrative: '전국적인 정전 발생! 집에 공기청정기가 꺼지고 미세먼지가 차오른다.',
+                        options: [
+                            { text: '분무기로 공중에 물을 자주 분사하고 젖은 수건을 집안 곳곳에 내걸어 침전 유도.', hp: 0, mental: +10, feedback: '수분을 이용한 미세먼지 흡착 성공!' },
+                            { text: '촛불을 대량으로 켜서 연기를 없애려 한다.', hp: -60, mental: -70, feedback: '산소 고갈 및 일산화탄소 중독!' },
+                            { text: '부채질을 세게 하여 먼지를 밖으로 밀어낸다.', hp: -40, mental: -40, feedback: '바닥에 쌓인 먼지가 재부상!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 목 통증과 급성 후두염 증상 발병',
+                        narrative: '목이 타는 듯이 아프고 기침을 할 때마다 피맛이 난다!',
+                        options: [
+                            { text: '미지근한 물을 자주 마시고 소금물로 목 가글을 지속 시행.', hp: +5, mental: +5, feedback: '점막 보호 및 미세먼지 배출 촉진!' },
+                            { text: '차가운 얼음물을 한꺼번에 마신다.', hp: -30, mental: -30, feedback: '기관지 수축으로 기침 악화!' },
+                            { text: '목이 아프다며 탄산음료를 마신다.', hp: -40, mental: -40, feedback: '식도 점막 추가 자극.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 방진 마스크 필터 수명 고갈',
+                        narrative: '착용 중인 KF94 마스크 필터가 먼지로 검게 변해 숨쉬기가 턱턱 막힌다.',
+                        options: [
+                            { text: '새 마스크로 교체하거나 마스크 안쪽에 젖은 거즈를 덧대어 이중 방어.', hp: 0, mental: +5, feedback: '호흡기 안전 유지 성공!' },
+                            { text: '답답하다며 마스크를 벗어던진다.', hp: -80, mental: -90, feedback: '3000ppm 미세먼지 즉시 흡입!' },
+                            { text: '마스크를 물로 씻어서 다시 쓴다.', hp: -60, mental: -60, feedback: '정전기 필터 파괴로 성능 0% 전락!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 눈에 미세먼지 파편 침투',
+                        narrative: '눈에 고통스러운 이물감이 느껴지며 눈을 뜨기 힘들다!',
+                        options: [
+                            { text: '절대 눈을 비비지 않고 인공눈물이나 깨끗한 식염수로 씻어낸다.', hp: +5, mental: +5, feedback: '안구 각막 상처 방지 성공!' },
+                            { text: '손으로 눈을 세게 문지른다.', hp: -70, mental: -70, feedback: '미세먼지 입자가 각막을 긁어 실명 위기!' },
+                            { text: '수돗물에 눈을 대고 뜬다.', hp: -40, mental: -30, feedback: '수돗물 세균 감염 위기.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 정부 대피소 청정구역 도착',
+                        narrative: '양압 환기 시스템이 가동 중인 대형 정부 재난 대피소 문앞 도착!',
+                        options: [
+                            { text: '에어샤워실에서 겉옷의 먼지를 완전히 털어낸 후 청정 내부로 입장.', hp: +10, mental: +20, feedback: '축하합니다! 초미세먼지 폭풍 속에서 완전 생환!' },
+                            { text: '옷에 먼지가 가득한 채 대피소 내부로 들어간다.', hp: -50, mental: -50, feedback: '대피소 내부 공기 오염 유발로 퇴출.' },
+                            { text: '대피소 밖에서 마스크를 벗고 쉬어간다.', hp: -70, mental: -80, feedback: '막판 대량 흡입으로 기절.' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'europe_pickpocket',
+                category: 'life',
+                title: '첫 유럽 여행 소매치기 생존기',
+                badge: '대사관 무사귀환 훈장',
+                difficulty: 4.8,
+                time: '5초/문항',
+                image: IMG_EUROPE,
+                desc: '하늘을 떠다니는 듯한 첫 유럽 여행! 도착하자마자 여권, 지갑, 비자까지 몽땅 소매치기 당했다! 언어도 안 통하는 낯선 타지에서 대사관을 찾아 무사히 살아남아라!',
+                icon: 'plane',
+                badgeDesc: '언어 장벽과 소매치기 참사를 극복하고 정식 긴급여권 발급 및 무사 귀환 성공.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 기차역 직후 소매치기 인지 및 첫 행동',
+                        narrative: '유럽 기차역에 내리자마자 가방이 열려있고 여권, 지갑, 비자까지 통째로 사라졌다! 말이 안 통하는 곳에서 당장 무엇을 해야 하는가?',
+                        options: [
+                            { text: '소매치기범을 찾겠다고 고함을 지르며 지나가는 노숙자들에게 시비를 건다.', hp: -45, mental: -50, feedback: '소란 유발로 소지품 추가 수색당하고 경찰 경고 받음!' },
+                            { text: '당황하지 않고 소지품을 재확인 후 현지 경찰서(Police Station) 위치를 검색하고 분실 신고 준비.', hp: -5, mental: -10, feedback: '체력과 정신력이 약간 소모되었지만 경찰 분실 신고서(Police Report) 준비 완료!' },
+                            { text: '길바닥에 주저앉아 눈물을 흘리며 멍하니 시간을 보낸다.', hp: -25, mental: -50, feedback: '2차 소매치기의 타겟이 되어 가방끈까지 잘림!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 언어 장벽 속 현지 경찰서 분실 신고',
+                        narrative: '경찰서에 도착했으나 경찰이 영어를 전혀 못하고 현지 언어만 사용한다!',
+                        options: [
+                            { text: '한국어로 소리치며 화를 내고 바디랭귀지로 무작정 떼를 쓴다.', hp: -35, mental: -45, feedback: '경찰서에서 소란 죄로 유치장에 갇힐 위기!' },
+                            { text: '신고를 포기하고 무작정 대사관으로 달린다.', hp: -30, mental: -40, feedback: '경찰 리포트가 없어 대사관 입구에서 퇴짜 당함!' },
+                            { text: '스마트폰 번역기 오프라인 모드나 대사관 서식("Passport Stolen")을 제시하며 끈질기게 작성.', hp: -10, mental: -15, feedback: '극심한 스트레스와 피로 속에서 정식 Police Report 발급 성공!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 지갑 0원 상태에서 대사관까지의 이동',
+                        narrative: '주머니에 단 1유로도 없다! 대사관은 10km 떨어져 있는 상황.',
+                        options: [
+                            { text: '한국 영사콜센터(+82-2-3210-0404)에 긴급 연락하여 "신속해외입금 제도" 지원 요청.', hp: -5, mental: -15, feedback: '대기 시간 동안 진이 빠졌으나 신속해외입금 지원 승인 완료!' },
+                            { text: '지하철 개찰구를 무단으로 넘어 무표 탑승한다.', hp: -55, mental: -60, feedback: '단속원에게 체포되어 고액 벌금 및 유치장 수감!' },
+                            { text: '지나가는 한국인 관광객에게 살려달라며 돈을 구걸한다.', hp: -20, mental: -50, feedback: '이상한 사람 취급받으며 구걸 거절당하고 멘탈 붕괴.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 낯선 골목길의 호객꾼과 팔찌 강매범',
+                        narrative: '⚠️ 대사관 가는 골목길에서 억세게 생긴 사내 3명이 팔에 강제로 실팔찌를 채우며 50유로를 요구한다!',
+                        options: [
+                            { text: '팔찌를 채우게 내버려두고 "돈 없어요"라며 주머니를 뒤적인다.', hp: -50, mental: -60, feedback: '남은 시계와 안경까지 강제로 빼앗김!' },
+                            { text: '손을 강하게 뿌리치고 "NO!"를 단호히 외치며 사람이 많은 대로변으로 신속 이동.', hp: -10, mental: -10, feedback: '약간의 몸싸움으로 손목 통증이 있으나 대로변 탈출 성공!' },
+                            { text: '구석진 어두운 골목길 안쪽으로 숨어 들어간다.', hp: -40, mental: -50, feedback: '우범지대에 갇혀 강도들에게 둘러싸임.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 위치 판별과 대사관 도로 찾기',
+                        narrative: '스마트폰 데이터가 끊기고 대사관 주소만 종이에 적혀있다.',
+                        options: [
+                            { text: '직감만 믿고 아무 방향으로 무작정 걸어간다.', hp: -45, mental: -40, feedback: '반대 방향으로 7km 걸어가 다리 근육 파열!' },
+                            { text: '수상해 보이는 길거리 사설 인포메이션 부스에 들어간다.', hp: -60, mental: -50, feedback: '사기꾼 패거리에게 사기를 당하고 위협받음!' },
+                            { text: '대형 호텔 카운터나 관공서에 들어가 영사관 주소를 보여주며 정중히 길 안내 요청.', hp: -5, mental: -10, feedback: '민폐 미안함과 피로감이 있지만 정확한 지도 경로 확보!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 긴급 여권 발급용 사진 및 규정 처리',
+                        narrative: '대사관 도착! 영사가 "여권용 사진 2장과 수수료가 필요하다"고 한다.',
+                        options: [
+                            { text: '대사관 내부 비치된 비상 사진기나 영사관 신속 입금 시스템으로 수수료 처리.', hp: -10, mental: -10, feedback: '지친 상태지만 규정대로 긴급 단단여권 신청 성공!' },
+                            { text: '사진 없이 발급해달라고 창구를 두드리며 고함을 친다.', hp: -40, mental: -60, feedback: '업무 방해로 대사관 보안요원에게 강제 퇴장 당함.' },
+                            { text: '사설 사진관을 찾아 헤매다 바가지를 쓴다.', hp: -35, mental: -30, feedback: '3시간 헤매며 발바닥 물집 및 지출 가중.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 임시 여권 수령 후 귀국 비행기표 재발권',
+                        narrative: '긴급 여권을 손에 쥐었다! 소매치기로 비자 정보가 날아간 항공권을 처리해야 한다.',
+                        options: [
+                            { text: '여권만 들고 무작정 공항에 가서 출국장으로 난입한다.', hp: -50, mental: -60, feedback: '공항 보안요원에 제압당하고 탑승 거부!' },
+                            { text: '영사관 도움으로 한국 항공사 고객센터 연결, 여권번호 변경 후 귀국권 재발권.', hp: -5, mental: -15, feedback: '통화 대기 스트레스가 극심했으나 귀국 항공권 확보 완료!' },
+                            { text: '귀국을 포기하고 유럽 현지 불법체류 노숙자가 된다.', hp: -80, mental: -90, feedback: '체포되어 강제 노역 후 수감.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 공항 출국 심사대 통과 및 무사 귀국',
+                        narrative: '공항 출입국 심사대. 심사관이 긴급 여권과 경찰 분실 신고서를 번갈아 본다.',
+                        options: [
+                            { text: '보안검색대에서 소지품을 챙기지 않고 딴짓을 한다.', hp: -60, mental: -80, feedback: '발급받은 긴급 여권을 또 분실하여 귀국 불허!' },
+                            { text: '면세점 구경을 하다가 비행기 탑승 게이트 마감 노쇼.', hp: -40, mental: -60, feedback: '비행기 놓치고 공항 노숙 확정.' },
+                            { text: '경찰 리포트와 긴급 여권을 차분히 제출하고 정중한 태도로 출국 심사대 통과.', hp: -10, mental: -10, feedback: '시련과 탈진 속에서 무사히 대한민국 귀국 성공!' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'first_aid',
+                category: 'life',
+                title: '응급상황 생명구조 응급처치 생존기',
+                badge: '골든타임 생명구조사 훈장',
+                difficulty: 4.9,
+                time: '5초/문항',
+                image: IMG_FIRST_AID,
+                desc: '나만 사는 것은 생존왕이 아니다! 가슴 통증 쓰러짐, 등산 중 허벅지 출혈, 사탕이 목에 걸린 아이! 올바른 응급처치로 골든타임을 사수하고 생명을 구하라!',
+                icon: 'heart-pulse',
+                badgeDesc: '정확한 CPR, AED, 지혈법, 하임리히법으로 위기 속 소중한 생명들을 모두 구해냄.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 지하철 안 앞사람이 가슴을 움켜쥐며 쓰러짐',
+                        narrative: '지하철 안에서 앞 사람이 가슴을 웅켜쥐며 의식을 잃고 쓰러졌다! 5초 내 당신의 첫 행동은?',
+                        options: [
+                            { text: '환자 의식·호흡 확인 후, 특정 사람을 지목해 "119 신고 및 AED(자동심장충격기) 가져와주세요!" 요청.', hp: -5, mental: -10, feedback: '긴박한 지시로 체력과 정신력이 깎였지만 골든타임 확보 성공!' },
+                            { text: '환자를 무작정 일으켜 세워 앉히고 물을 마시게 한다.', hp: -50, mental: -40, feedback: '기도 흡인으로 환자 상태 악화 및 패닉!' },
+                            { text: '주변 사람들과 둘러싸고 걱정만 하며 지켜본다.', hp: -30, mental: -60, feedback: '골든타임 허비로 환자 뇌손상 심화.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 쓰러진 환자 심폐소생술(CPR) 시행',
+                        narrative: '환자의 호흡과 맥박이 없다! 119가 오기 전 심폐소생술을 실시해야 한다.',
+                        options: [
+                            { text: '배꼽 부위를 살살 주물러준다.', hp: -60, mental: -70, feedback: '장기 손상 및 환자 심장마비 방치!' },
+                            { text: '가슴 중앙(양 젖꼭지 연결선 중앙)을 분당 100~120회, 5cm 깊이로 강하고 빠르게 압박.', hp: -20, mental: -10, feedback: '극심한 팔 체력 소모 속에서 정확한 CPR로 혈류 유지 성공!' },
+                            { text: '갈비뼈 부러질까 봐 손가락으로 가슴을 살살 누른다.', hp: -40, mental: -50, feedback: '가슴 압박 깊이 불충분으로 무용지물.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 자동심장충격기(AED) 도착 및 사용',
+                        narrative: '시민이 AED를 가져왔다! 전기 충격을 가하기 위한 정확한 순서는?',
+                        options: [
+                            { text: '환자 가슴에 물을 뿌린 후 패드를 부착한다.', hp: -70, mental: -70, feedback: '전류 분산으로 감전 사고 발생!' },
+                            { text: 'AED가 심장 분석을 하는 동안 환자 몸을 꼭 잡고 있는다.', hp: -80, mental: -60, feedback: '분석 오류 및 처치자 전기 감전 충격!' },
+                            { text: '패드를 우측 빗장뼈 아래와 좌측 젖꼭지 아래 붙이고, 충격 시 "모두 물러나세요!" 외침.', hp: -5, mental: -15, feedback: '긴장감 속에 정확한 제세동 성공하여 환자 맥박 회복!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 친구와 등산 중 굴러떨어져 대퇴부 출혈',
+                        narrative: '⚠️ 친구가 암벽에서 굴러떨어져 허벅지 대퇴부에서 붉은 피가 분출하듯 뿜어져 나온다!',
+                        options: [
+                            { text: '깨끗한 옷으로 상처 부위를 직접 강력 압박하고, 상처 위쪽을 압박 붕대로 고정.', hp: -15, mental: -10, feedback: '손 힘 고갈과 피 범벅 스트레스 속에 과다출혈 사망 차단!' },
+                            { text: '피 나는 부위에 흙과 쑥잎을 바른다.', hp: -80, mental: -80, feedback: '파상풍 및 패혈증 유발로 상태 극악 악화!' },
+                            { text: '지혈 없이 친구를 등에 업고 뛰어내려간다.', hp: -60, mental: -60, feedback: '이동 중 과다출혈로 친구 의식 불명!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 사탕을 먹던 아이의 기도 폐쇄 (하임리히법)',
+                        narrative: '식당에서 사탕을 먹던 아이가 갑자기 기침을 연발하며 얼굴이 파랗게 질렸다!',
+                        options: [
+                            { text: '아이 입에 손가락을 깊숙이 넣어 억지로 꺼내려 한다.', hp: -50, mental: -60, feedback: '사탕이 기도 뒤로 더 깊숙이 박혀 산소 마비!' },
+                            { text: '아이 뒤에서 배꼽과 명치 중간에 주먹 쥔 손을 대고 위로 강하게 끌어올림(하임리히법).', hp: -10, mental: -10, feedback: '체력 소모와 식은땀 속에 사탕이 튀어나오며 기도 확보!' },
+                            { text: '아이를 거꾸로 들어 올려 허벅지를 세게 때린다.', hp: -60, mental: -50, feedback: '목 척추 부상 및 시간 지연!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 여름철 폭염 속 환자의 열사병 쓰러짐',
+                        narrative: '야외에서 작업하던 사람이 고열과 함께 의식을 잃고 쓰러졌다.',
+                        options: [
+                            { text: '의식이 희미한 환자 입에 얼음물을 강제로 구강 투여한다.', hp: -70, mental: -70, feedback: '기도 폐쇄 및 흡인성 폐렴 유발!' },
+                            { text: '두꺼운 이불을 덮어 땀을 푹 빼게 한다.', hp: -80, mental: -80, feedback: '체온 상승으로 체온조절중추 완전 마비!' },
+                            { text: '즉시 시원한 음지로 옮기고 옷을 느슨하게 한 뒤 젖은 수건과 부채질로 체온을 낮춤.', hp: -10, mental: -5, feedback: '환자 이송 체력 소모 속 체온 정상화 성공!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 뜨거운 기름/물에 의한 중증 화상 발생',
+                        narrative: '손에 뜨거운 기름이 쏟아져 피부가 빨갛게 부어오르고 물집이 잡힌다!',
+                        options: [
+                            { text: '흐르는 찬물(15~20도)로 15분 이상 충분히 식히고 깨끗한 거즈로 가볍게 덮어 병원 이동.', hp: -5, mental: -10, feedback: '통증 간호 피로 속 화상 깊이 진행 완벽 차단!' },
+                            { text: '화상 부위 물집을 터뜨리고 치약이나 된장을 바른다.', hp: -80, mental: -80, feedback: '2차 대형 세균 감염 및 피부 괴사!' },
+                            { text: '얼음 덩어리를 피부에 직접 장시간 대고 문지른다.', hp: -50, mental: -50, feedback: '동상 유발 및 세포 조직 파괴!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 119 구급대원 현장 도착 및 인수인계',
+                        narrative: '사이렌 소리와 함께 119 구급대원이 현장에 도착했다!',
+                        options: [
+                            { text: '구급대원에게 왜 이제 왔냐며 소리를 지르고 시비를 건다.', hp: -50, mental: -60, feedback: '감정 소비로 환자 이송 지연!' },
+                            { text: '발생 시각, 환자 최초 상태, 시행한 응급처치 내용을 차분하게 인수인계.', hp: -5, mental: -5, feedback: '진이 빠졌지만 생명을 구한 완벽한 인수인계 성공!' },
+                            { text: '구급차를 가로막고 내 차로 데려가겠다고 고집을 피운다.', hp: -60, mental: -50, feedback: '전문 의료 처치 기회 박탈.' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'restaurant',
+                category: 'life',
+                title: '첫 창업 식당사장님 생존기',
+                badge: '골목식당 백전베테랑 훈장',
+                difficulty: 4.8,
+                time: '5초/문항',
+                image: IMG_RESTAURANT,
+                desc: '배달거지, 취객, 진상 손님, 근태 불량 알바생, 복잡한 첫 세무처리까지! 5초 내 현명한 장사 노하우를 발휘해 폐업 위기를 넘겨라!',
+                icon: 'utensils',
+                badgeDesc: '각종 진상 빌런과 세금 폭탄을 지혜롭게 물리치고 월 매출 1억 맛집으로 등극.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 배달거지의 기습 환불 및 별점 협박',
+                        narrative: '음식을 다 먹고 머리카락이 나왔다며 음식값 전액 환불 안 해주면 별점 1점에 인스타 악성 루머를 올리겠다고 협박한다!',
+                        options: [
+                            { text: '무서워서 음식값 전액 환불해주고 서비스 메뉴까지 배달로 보낸다.', hp: -30, mental: -40, feedback: '배달거지 사냥감이 되어 계속 당함!' },
+                            { text: 'CCTV 및 조리과정 확인 후 "절차대로 식약처 및 플랫폼 고객센터 통해 사실확인 후 처리하겠습니다" 단호 응대.', hp: -5, mental: -10, feedback: '감정 노동으로 멘탈이 깎였으나 무분별한 억지 환불 및 별점 테러 차단!' },
+                            { text: '손님에게 전화로 쌍욕을 퍼붓고 같이 인스타 맞불전을 벌인다.', hp: -50, mental: -60, feedback: '매장 이미지 실추 및 영업정지 위험!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 영업 중 만취 취객 난동 및 기물 파손',
+                        narrative: '만취한 손님이 옆 테이블 손님에게 시비를 걸고 소주병을 깨뜨리며 고함을 친다!',
+                        options: [
+                            { text: '맨손으로 취객을 때려눕히려고 몸싸움을 벌인다.', hp: -60, mental: -40, feedback: '쌍방 폭행 입건 및 타박상 입음!' },
+                            { text: '무서워서 주방 구석에 숨어 취객이 기물을 다 부수게 둔다.', hp: -40, mental: -50, feedback: '손님 도망치고 매장 기물 완파!' },
+                            { text: '다른 손님들을 안전지대로 피신시키고 즉시 112 신고 후 경찰 올 때까지 거리 유지.', hp: -10, mental: -10, feedback: '손님 대피 체력 소모 및 스트레스 속 정당한 치안 요청 성공!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 금요일 피크타임 알바생 무단 결근 (노쇼)',
+                        narrative: '금요일 저녁 6시 단체 예약 40명! 핵심 알바생 2명이 "갑자기 아파서 못 가요" 한 마디 후 연락두절!',
+                        options: [
+                            { text: '홀 메뉴를 단순화하고 급구 일당 알바(시급 1.5배) 공고를 빠르게 올리며 동선 효율화.', hp: -15, mental: -10, feedback: '육체적 피로와 시급 지출이 발생했으나 피크타임 사수 성공!' },
+                            { text: '손님들에게 다짜고짜 기다리라고 소리치며 혼자 허둥지둥한다.', hp: -50, mental: -60, feedback: '음식 늦게 나가 집단 환불 요청!' },
+                            { text: '멘탈이 터져 문을 잠그고 오늘 장사를 접는다.', hp: -30, mental: -80, feedback: '금요일 매출 날아가고 월세 차압 위기!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 악성 진상 손님의 노쇼 & 무리한 서비스 요구',
+                        narrative: '⚠️ 20명 단체 예약 후 노쇼하더니, 1시간 뒤 나타나 "고기 5인분 서비스 주면 들어갈게"라고 요구한다!',
+                        options: [
+                            { text: '화가 나서 단체 손님 얼굴에 물을 뿌리며 나가라고 한다.', hp: -50, mental: -70, feedback: '모욕죄 고소 및 매출 전무!' },
+                            { text: '노쇼 규정을 설명하고 "예약금 차감 안내 후 정식 주문 시 음료수 서비스 정도만 가능합니다" 단호 협상.', hp: -5, mental: -15, feedback: '실갱이 스트레스는 겪었으나 원칙 사수 및 적자 최소화!' },
+                            { text: '손해를 감수하고 고기 5인분과 음료수를 전부 공짜로 바친다.', hp: -40, mental: -50, feedback: '원가율 폭등으로 오늘 장사 마이너스!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 생전 처음 해보는 5월 종합소득세 세무 처리 폭탄',
+                        narrative: '세무 지식 제로! 국세청에서 종합소득세 추계신고 세금 폭탄 통지서가 날아왔다!',
+                        options: [
+                            { text: '"에이 모르겠다" 하고 신고를 안 하고 무시한다.', hp: -70, mental: -80, feedback: '가산세 20% 및 계좌 가압류 조치!' },
+                            { text: '인터넷 블로그 보고 임의로 매출을 0원으로 속여 신고한다.', hp: -60, mental: -90, feedback: '탈세 적발로 수천만 원 추징금 통보!' },
+                            { text: '전문 요식업 세무사를 찾아가 매입 증빙 및 경비 영수증을 제출해 정식 기장 세액 공제 신청.', hp: -5, mental: -10, feedback: '세무 수수료 및 준비 스트레스가 있었으나 세금 80% 절감 성공!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 근태 불량 알바생의 기습 주휴수당 & 노동청 고소',
+                        narrative: '지각 일수에 업무 태만으로 자진 퇴사한 알바생이 부당해고 및 주휴수당 미지급으로 노동청 신고!',
+                        options: [
+                            { text: '출퇴근 기록부, 근로계약서, 임금 입금 내역, 지각 카톡 기록을 주무관에게 정직하게 제출.', hp: -10, mental: -15, feedback: '노동청 출석 피로감이 컸지만 무고함 입증 완료!' },
+                            { text: '노동청 출석 요구를 무시하고 잠적한다.', hp: -60, mental: -70, feedback: '체불 사업주로 입건되어 형사 처벌!' },
+                            { text: '알바생에게 찾아가 뒷조사 및 협박을 한다.', hp: -70, mental: -80, feedback: '협박죄 추가로 상황 극악 악화!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 식자재 가격 폭등 및 물가 인상 압박',
+                        narrative: '주요 식자재(배추, 원육) 가격이 3배 폭등! 가격을 올리면 단골이 끊기고, 안 올리면 적자다!',
+                        options: [
+                            { text: '손님 몰래 고기 질을 상한 저가 외국산으로 바꾸고 속여 판다.', hp: -60, mental: -80, feedback: '식중독 파동 및 원산지 위반 영업취소!' },
+                            { text: '반찬 가짓수를 일부 조절하고 메인 요리 퀄리티를 유지하며 가격 인상 사유 안내문 정중 게시.', hp: -5, mental: -10, feedback: '단골 설득 스트레스가 있었으나 매출과 품질 방어 성공!' },
+                            { text: '무작정 가격을 2배로 올려버린다.', hp: -30, mental: -50, feedback: '손님 발길 완전히 끊김.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 파워블로거라 주장하는 인플루언서의 공짜 협박',
+                        narrative: '파워블로거라 주장하는 사람이 "무료로 20만원치 먹게 해주면 리뷰 대박 내줄게"라고 압박한다.',
+                        options: [
+                            { text: '무서워서 20만원치 코스요리를 풀 대접한다.', hp: -30, mental: -40, feedback: '소문 들은 유사 사기꾼들 떼로 몰려옴.' },
+                            { text: '매장에서 고함을 지르고 쫓아내 소란을 피운다.', hp: -40, mental: -50, feedback: '손님들 식사 흐름 파괴 및 피해보상.' },
+                            { text: '"저희 매장은 정직한 손님 리뷰로만 운영됩니다"라고 정중히 거절하고 맛과 서비스로 승부.', hp: -5, mental: -10, feedback: '거절의 부담감은 있었지만 무수한 빌런을 극복하고 월 매출 1억 달성!' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'teacher',
+                category: 'life',
+                title: '초임교사 각종 빌런 생존기',
+                badge: '참스승 교권수호 훈장',
+                difficulty: 4.8,
+                time: '5초/문항',
+                image: IMG_TEACHER,
+                desc: '사회성 결여 학생, 비행 청소년, 악성 민원 학부모, 책임감 없는 교장/교감까지! 5초 내 교권 수호 매뉴얼을 발휘해 생존하라!',
+                icon: 'graduation-cap',
+                badgeDesc: '악성 민원과 교권 침해를 매뉴얼과 정당한 법적 절차로 극복하고 진정한 교사로 거듭남.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 수업 시간 무단 스마트폰 게임 & 도발 학생',
+                        narrative: '수업 중 맨 앞자리 학생이 이어폰을 끼고 모바일 게임을 하며 "쌤이 뭔데 상관이에요?"라고 비웃는다!',
+                        options: [
+                            { text: '감정적 대응 없이 학급 규칙에 따라 휴대폰 제출을 요구하고, 불응 시 생활지도 기록 및 보호자 안내.', hp: -5, mental: -10, feedback: '감정 소모와 지도 스트레스가 있었으나 원칙적인 생활지도 이행으로 교권 사수!' },
+                            { text: '분노를 참지 못하고 학생의 스마트폰을 빼앗아 바닥에 던져 깨뜨린다.', hp: -60, mental: -70, feedback: '기물파손 및 감정적 지도 논란 고소!' },
+                            { text: '아무 말도 못하고 울면서 수업을 진행한다.', hp: -30, mental: -50, feedback: '학급 통제권 완전히 상실!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 밤 11시 악성 민원 학부모의 기습 카톡 & 전화',
+                        narrative: '밤 11시! 학부모가 "우리 애가 오늘 학교에서 기분이 나쁘다는데 교사가 애를 차별합니까?"라며 폭언 전화를 건다.',
+                        options: [
+                            { text: '밤새 학부모 전화를 받으며 죄송하다고 울면서 사과한다.', hp: -50, mental: -60, feedback: '잘못이 없는데 죄인 취급받고 불면증 유발!' },
+                            { text: '개인 휴대폰 대신 업무용 교원안심번호 활용, "내일 공식 근무시간(08:30)에 상담해 드리겠습니다" 메시지 후 통화 종료.', hp: -5, mental: -10, feedback: '야간 긴장감은 남아있으나 사생활 보호 및 상담 절차 확립!' },
+                            { text: '학부모에게 "밤중에 무슨 짓입니까!"라며 맞대응 욕설을 한다.', hp: -60, mental: -80, feedback: '품위유지의무 위반으로 징계위원회 소환!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 담배 및 비행 청소년의 옥상 비밀 구역 도발',
+                        narrative: '청소 시간, 학교 뒤편에서 비행 학생 4명이 담배를 피우며 선생님을 향해 "한 대 피우실래요?" 도발한다.',
+                        options: [
+                            { text: '혼자 몸으로 막아서며 담배를 뺏으려 물리적 격투를 벌인다.', hp: -50, mental: -40, feedback: '신체 접촉으로 아동학대 시비 유발!' },
+                            { text: '못 본 척 고개를 숙이고 조용히 지나간다.', hp: -20, mental: -40, feedback: '비행 학생들의 쉬운 먹잇감으로 도발 강화.' },
+                            { text: '현장 사진/상황을 기록하고 즉시 학생부(생활안전부) 교사와 동행하여 정식 선도위원회 절차 착수.', hp: -10, mental: -10, feedback: '동료 교사 동원 피로 속 객관적 선도 절차 진행 완료!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: 책임감 없는 교장·교감의 덮어씌우기',
+                        narrative: '⚠️ 학부모 민원이 들어오자 교장선생님이 "초임 선생이 처신을 어떻게 했길래! 무조건 사과해!"라며 책임을 전가한다.',
+                        options: [
+                            { text: '교권보호위원회 개최 신청 및 교직원 노조/교권 변호사 자문을 구하고 객관적 지도 일지를 제시한다.', hp: -10, mental: -15, feedback: '행정 절차 진행 스트레스가 컸으나 관리자의 부당 압박 완벽 차단!' },
+                            { text: '교장 요구대로 억울하게 학부모 집에 찾아가 무릎을 꿇는다.', hp: -60, mental: -80, feedback: '교사 자존감 완벽 붕괴 및 자아 상실.' },
+                            { text: '교장실 책상을 뒤엎고 사직서를 낸다.', hp: -40, mental: -60, feedback: '정당한 권리 행사 없이 일자리 상실.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 사회성 결여 학생의 교실 내 기물 파손 및 발작',
+                        narrative: '시험 결과에 불만을 품은 학생이 책상을 던지고 유리창을 깨뜨리려 난동을 부린다!',
+                        options: [
+                            { text: '난동 부리는 학생의 목을 누르고 강제 물리 제압을 한다.', hp: -70, mental: -60, feedback: '학생 부상 및 가해 교사 역고소!' },
+                            { text: '다른 학생들을 즉시 복도로 대피시키고, 보건교사 및 안전 담당 교사를 긴급 호출하여 물리적 분리.', hp: -15, mental: -10, feedback: '대피 및 통제 체력 소모 속 학생 안전 확보 성공!' },
+                            { text: '교실 안에서 아이들과 함께 비명을 지르며 당황한다.', hp: -40, mental: -50, feedback: '2차 안전사고 발생!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 무고성 아동학대 신고 협박',
+                        narrative: '정당한 생활지도를 받은 학생의 부모가 "우리 아이 멘탈을 깨뜨렸으니 아동학대로 고소하겠다"고 협박한다.',
+                        options: [
+                            { text: '고소가 무서워서 합의금 500만원을 제시한다.', hp: -70, mental: -90, feedback: '죄를 인정하는 꼴이 되어 추가 금전 요구 당함!' },
+                            { text: '학생을 교무실로 불러 "너 고소 취하 안 하면 생활기록부 망친다"고 위협한다.', hp: -60, mental: -80, feedback: '진짜 아동학대 및 협박죄 성립!' },
+                            { text: '당시 상황을 기록한 학급 일지, 목격 학생 진술서, 교권보호위원회 의결서를 준비하여 정당한 교육활동 입증.', hp: -5, mental: -15, feedback: '서류 증빙 피로감이 컸지만 무고 고소 무혐의 처분 완료!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 학급 내 학교폭력 가해·피해 학생 진술 대립',
+                        narrative: '쉬는 시간 일어난 폭력 사건! 가해자와 피해자 진술이 180도 다르고 양측 부모가 학교로 밀고 들어온다.',
+                        options: [
+                            { text: '즉시 전담기구 학폭 전담 교사에게 사안 이관 후, 양측 부모를 분리된 장소에서 객관적 사실 기반 매뉴얼대로 안내.', hp: -5, mental: -10, feedback: '상담 대응 스트레스가 있었으나 정당한 법정 절차 준수로 감정 소모 최소화!' },
+                            { text: '선생님 임의대로 누구 하나를 가해자로 지목하고 단정 짓는다.', hp: -50, mental: -60, feedback: '편파 조사 논란으로 양측 부모 폭언 청구!' },
+                            { text: '양측 부모를 한 방에 넣고 알아서 싸우라고 내버려둔다.', hp: -40, mental: -50, feedback: '교무실 내 육탄전 발생!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 스승의 날 & 첫 해 마감 시 성취감과 평가',
+                        narrative: '다사다난했던 첫 해 마감. 반 아이들이 "선생님 고맙습니다" 롤링페이퍼와 깜짝 이벤트를 준비했다.',
+                        options: [
+                            { text: '"너희들 때문에 교직 그만둘 거다"라며 냉정하게 교실을 나간다.', hp: -30, mental: -50, feedback: '아이들에게 상처를 남기고 만성 트라우마.' },
+                            { text: '지난 시련을 밑거름 삼아 아이들과 교감을 나누고 원칙 있는 단단한 참스승으로 성장을 다짐한다.', hp: -5, mental: -5, feedback: '지친 심신 속에서도 무수한 빌런을 극복하고 진짜 스승으로 성장 완성!' },
+                            { text: '고가의 금품이나 선물을 받아 가방에 챙긴다.', hp: -80, mental: -90, feedback: '청탁금지법 위반 적발로 파면!' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'budget',
+                category: 'life',
+                title: '잔고 10만원 한달 생존',
+                badge: '최저가 연명왕 훈장',
+                difficulty: 4.8,
+                time: '5초/문항',
+                image: IMG_BUDGET,
+                desc: '영양 파괴, 기습 과태료, 인간관계 파탄의 3중고! 5초 내 정확한 가성비와 멘탈 보존 계산을 내리지 못하면 즉시 극빈자로 퇴출!',
+                icon: 'wallet',
+                badgeDesc: '극악의 칼로리 계산과 치밀한 예산 통제로 파산을 막아냄.',
+                stages: [
+                    {
+                        title: 'STAGE 1: 필수 영양성분 대용량 장보기',
+                        narrative: '한 달 식비 예산 단 4만 원! 영양 불균형으로 패배하지 않으려면 어떤 전략을 선택해야 하는가?',
+                        options: [
+                            { text: '대용량 계란 30구, 두부 3모, 냉동 닭가슴살 2kg, 현미 5kg을 구매한다.', hp: +5, mental: +2, feedback: '단백질과 장기 탄수화물 완벽 수급!' },
+                            { text: '유통기한 임박 초특가 식빵 20봉지와 딸기잼을 대량 결제한다.', hp: -35, mental: -30, feedback: '당뇨 위험과 급격한 혈당 스파이크로 건강 저하!' },
+                            { text: '3만 원짜리 종합비타민 1병과 1만 원치 컵라면을 산다.', hp: -50, mental: -40, feedback: '비타민만으로 허기를 채울 수 없어 사흘 만에 쓰러짐!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 2: 친구의 생일파티 초대 및 축의금/선물 압박',
+                        narrative: '가장 친한 친구가 10만원짜리 고급 오마카세 생일파티에 초대했다. 축의금/선물로 최소 5만원이 깨진다.',
+                        options: [
+                            { text: '당당하게 "이번 달 예산 파산이라 마음만 보낸다"며 홈메이드 편지와 기프티콘 전달.', hp: -5, mental: +5, feedback: '진정한 우정과 현명한 지출 방어 성공!' },
+                            { text: '대출을 받아서라도 10만원짜리 선물을 사서 참석한다.', hp: -60, mental: -70, feedback: '남은 잔고 마이너스 통장 진입!' },
+                            { text: '연락을 씹고 잠수 탄다.', hp: -30, mental: -60, feedback: '친구 관계 완전 파탄.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 3: 지하철 교통카드 잔액 부족 경고음',
+                        narrative: '개찰구를 통과하려는데 "잔액이 부족합니다" 삑삑 소리가 울린다! 지갑에 2천 원짜리 동전뿐이다.',
+                        options: [
+                            { text: '역무실에 사정을 말하고 비상 정산증이나 계좌이체 임시 대피 처리.', hp: -5, mental: -10, feedback: '약간의 부끄러움은 있었으나 무사히 통과!' },
+                            { text: '개찰구를 뛰어넘으려다 공익요원에게 붙잡힌다.', hp: -50, mental: -60, feedback: '무임승차 부가금 30배 폭탄 맞음!' },
+                            { text: '다음 역까지 5km를 걸어간다.', hp: -40, mental: -30, feedback: '다리 근육통 및 지각 처리.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 4: ⚠️ 원룸 관리비 및 월세 납부일 기습 도래',
+                        narrative: '월세와 관리비 합쳐서 45만 원인데 현재 통장 잔고는 12만 원이다!',
+                        options: [
+                            { text: '집주인에게 무릎 꿇고 사정하며 일주일만 연기해 달라고 정중히 호소.', hp: -10, mental: -20, feedback: '식은땀이 흘렀으나 집주인의 극적인 양해 획득!' },
+                            { text: '도박이나 코인에 남은 12만 원을 올인하여 복구하려 한다.', hp: -90, mental: -90, feedback: '순식간에 전재산 0원 탕진 및 길거리 노숙!' },
+                            { text: '방세를 안 내고 야반도주를 감행한다.', hp: -80, mental: -80, feedback: '지명수배 및 보증금 압류!' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 5: 스마트폰 데이터 요금 폭탄 및 정지 위기',
+                        narrative: '데이터 미납 요금 통지서가 날아오며 내일 오전 발신 및 데이터가 차단된다!',
+                        options: [
+                            { text: '즉시 알뜰폰 요금제로 번호이동을 신청하고 데이터 무제한을 저렴하게 세팅.', hp: -5, mental: +5, feedback: '고정 지출 혁신적 다이어트 성공!' },
+                            { text: '와이파이존만 찾아다니며 구걸 노마드로 살아간다.', hp: -30, mental: -40, feedback: '외부 연락 두절 및 업무 마비.' },
+                            { text: '요금을 안 내고 휴대폰을 정지시킨다.', hp: -50, mental: -60, feedback: '사회적 고립 상태 진입.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 6: 갑작스러운 치아 통증과 치과 방문 위기',
+                        narrative: '어금니가 찌릿찌릿 아파오기 시작한다. 신경치료를 하면 최소 20만원이 든다.',
+                        options: [
+                            { text: '진통제를 대량으로 사 먹고 버틴다.', hp: -70, mental: -70, feedback: '치아 신경 괴사 및 병원비 더블 폭탄!' },
+                            { text: '보건소나 저소득층 의료 지원 센터를 찾아가 응급 처치 및 진료.', hp: -10, mental: -10, feedback: '현명한 공공 의료 서비스 활용으로 생존!' },
+                            { text: '바위로 아픈 이를 직접 뺀다.', hp: -99, mental: -99, feedback: '과다출혈 및 응급실 이송.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 7: 중고거래 플랫폼(당근)에서의 물품 처분',
+                        narrative: '당장 현금이 필요해 안 쓰는 태블릿PC를 당근마켓에 올렸다. "네고(가격 깎기) 되나요?" 챗이 빗발친다.',
+                        options: [
+                            { text: '적정 중고가에 직거래 약속을 잡고 지하철역 안전거래 진행.', hp: +10, mental: +10, feedback: '즉시 현금 확보 성공!' },
+                            { text: '구매자에게 욕설을 하며 소리친다.', hp: -30, mental: -50, feedback: '비매너 신고로 당근 계정 정지.' },
+                            { text: '택배로 물건을 먼저 보내고 돈을 못 받는다.', hp: -50, mental: -80, feedback: '중고 사기 당함.' }
+                        ]
+                    },
+                    {
+                        title: 'STAGE 8: 한 달 마감 및 잔고 1,200원 생환',
+                        narrative: '월급날 D-Day! 통장 잔고 1,200원을 남기고 마침내 급여가 통장에 입금되었다!',
+                        options: [
+                            { text: '기쁜 마음에 100만원치 클럽에 가서 탕진한다.', hp: -40, mental: -60, feedback: '다음 달 다시 파산 반복.' },
+                            { text: '지난 시련을 회상하며 예산 계획을 바로 세우고 저축 비율을 높인다.', hp: +10, mental: +20, feedback: '잔고 10만원 한달 생존 완전 성공!' },
+                            { text: '기절하듯 24시간 동안 잠만 잔다.', hp: 0, mental: +5, feedback: '피로 회복 달성.' }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        class SurvivalApp {
+            constructor() {
+                this.nickname = localStorage.getItem('sk_nickname') || '생존자' + Math.floor(1000 + Math.random() * 9000);
+                this.scores = JSON.parse(localStorage.getItem('sk_scores') || '{}');
+                this.badges = JSON.parse(localStorage.getItem('sk_badges') || '[]');
+                
+                this.currentTopic = null;
+                this.currentStageIdx = 0;
+                this.hp = 100;
+                this.mental = 100;
+                this.score = 0;
+
+                this.timer = null;
+                this.timeLeft = 5;
+                this.soundOn = true;
+
+                this.modalTab = 'leaderboard';
+                this.leaderboardData = [];
+            }
+
+            init() {
+                this.updateHeaderUI();
+                this.initAuth();
+                this.goHome();
+                lucide.createIcons();
+            }
+
+            async initAuth() {
+                if (!auth) return;
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (e) {
+                    console.error("Auth Exception:", e);
+                }
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        currentUser = user;
+                        await this.syncUserData();
+                        this.listenLeaderboard();
+                    }
+                });
+            }
+
+            async syncUserData() {
+                if (!db || !currentUser) return;
+                const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
+                try {
+                    const snap = await getDoc(userRef);
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        this.nickname = data.nickname || this.nickname;
+                        this.badges = data.badges || this.badges;
+                        localStorage.setItem('sk_nickname', this.nickname);
+                        localStorage.setItem('sk_badges', JSON.stringify(this.badges));
+                    } else {
+                        await setDoc(userRef, {
+                            nickname: this.nickname,
+                            highScore: this.getHighScore(),
+                            badges: this.badges,
+                            updatedAt: Date.now()
+                        }, { merge: true });
+                    }
+                    this.updateHeaderUI();
+                } catch (e) {
+                    console.error("User Sync Error:", e);
+                }
+            }
+
+            async saveUserScoreToFirebase() {
+                if (!db || !currentUser) return;
+                const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
+                const currentHigh = this.getHighScore();
+                try {
+                    await setDoc(userRef, {
+                        nickname: this.nickname,
+                        highScore: currentHigh,
+                        badges: this.badges,
+                        updatedAt: Date.now()
+                    }, { merge: true });
+                } catch (e) {
+                    console.error("Score Save Error:", e);
+                }
+            }
+
+            listenLeaderboard() {
+                if (!db) return;
+                const colRef = collection(db, 'artifacts', appId, 'users');
+                onSnapshot(colRef, (snapshot) => {
+                    const list = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        list.push({
+                            uid: doc.id,
+                            nickname: data.nickname || '익명 생존자',
+                            highScore: data.highScore || 0,
+                            badgesCount: (data.badges || []).length
+                        });
+                    });
+                    list.sort((a, b) => b.highScore - a.highScore);
+                    this.leaderboardData = list;
+                    this.updateSidebarRank();
+                    if (!document.getElementById('statsModal').classList.contains('hidden')) {
+                        this.renderModalContent();
+                    }
+                });
+            }
+
+            updateSidebarRank() {
+                const myRankElem = document.getElementById('sidebarUserRank');
+                if (!myRankElem) return;
+                if (!currentUser || this.leaderboardData.length === 0) {
+                    myRankElem.innerText = '상위 1%';
+                    return;
+                }
+                const idx = this.leaderboardData.findIndex(item => item.uid === currentUser.uid);
+                if (idx !== -1) {
+                    myRankElem.innerText = `전 세계 ${idx + 1}위`;
+                } else {
+                    myRankElem.innerText = '순위 밖';
+                }
+            }
+
+            getHighScore() {
+                let max = 0;
+                Object.values(this.scores).forEach(s => {
+                    if (s > max) max = s;
+                });
+                return max;
+            }
+
+            updateHeaderUI() {
+                document.getElementById('headerNickname').innerText = this.nickname;
+            }
+
+            toggleSound() {
+                this.soundOn = !this.soundOn;
+                audio.enabled = this.soundOn;
+                const bgm = document.getElementById('bgm');
+                const label = document.getElementById('soundLabel');
+                const icon = document.getElementById('soundIcon');
+
+                if (this.soundOn) {
+                    bgm.play().catch(() => {});
+                    label.innerText = '사운드 ON';
+                    icon.setAttribute('data-lucide', 'volume-2');
+                } else {
+                    bgm.pause();
+                    label.innerText = '사운드 OFF';
+                    icon.setAttribute('data-lucide', 'volume-x');
+                }
+                lucide.createIcons();
+            }
+
+            showToast(msg) {
+                const toast = document.getElementById('toast');
+                document.getElementById('toastMsg').innerText = msg;
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                setTimeout(() => {
+                    toast.classList.add('translate-y-20', 'opacity-0');
+                }, 3000);
+            }
+
+            openNicknameModal() {
+                document.getElementById('nicknameInput').value = this.nickname;
+                document.getElementById('nicknameModal').classList.remove('hidden');
+            }
+
+            closeNicknameModal() {
+                document.getElementById('nicknameModal').classList.add('hidden');
+            }
+
+            async saveNickname() {
+                const input = document.getElementById('nicknameInput').value.trim();
+                if (!input) return;
+                this.nickname = input;
+                localStorage.setItem('sk_nickname', this.nickname);
+                this.updateHeaderUI();
+                this.closeNicknameModal();
+                this.showToast('닉네임이 성공적으로 변경되었습니다.');
+                await this.saveUserScoreToFirebase();
+            }
+
+            openStatsModal() {
+                this.renderModalContent();
+                document.getElementById('statsModal').classList.remove('hidden');
+            }
+
+            closeStatsModal() {
+                document.getElementById('statsModal').classList.add('hidden');
+            }
+
+            switchModalTab(tab) {
+                this.modalTab = tab;
+                const leadBtn = document.getElementById('tabLeaderboardBtn');
+                const badgeBtn = document.getElementById('tabBadgesBtn');
+
+                if (tab === 'leaderboard') {
+                    leadBtn.className = "py-2 px-4 border-b-2 border-king-gold text-king-gold font-bold";
+                    badgeBtn.className = "py-2 px-4 border-b-2 border-transparent text-gray-400 hover:text-white font-bold";
+                } else {
+                    badgeBtn.className = "py-2 px-4 border-b-2 border-king-gold text-king-gold font-bold";
+                    leadBtn.className = "py-2 px-4 border-b-2 border-transparent text-gray-400 hover:text-white font-bold";
+                }
+                this.renderModalContent();
+            }
+
+            renderModalContent() {
+                const highScore = this.getHighScore();
+                document.getElementById('statHighScore').innerText = `${highScore} pts`;
+
+                let tier = '🥉 브론즈';
+                if (highScore >= 3000) tier = '💎 마스터';
+                else if (highScore >= 2000) tier = '🥇 골드';
+                else if (highScore >= 1000) tier = '🥈 실버';
+                document.getElementById('statRankTier').innerText = tier;
+
+                const content = document.getElementById('modalTabContent');
+
+                if (this.modalTab === 'leaderboard') {
+                    if (this.leaderboardData.length === 0) {
+                        content.innerHTML = `
+                            <div class="p-8 text-center text-gray-400 font-mono text-xs">
+                                <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2 text-king-gold"></i>
+                                실시간 리더보드 데이터 동기화 중...
+                            </div>
+                        `;
+                    } else {
+                        let html = `<div class="space-y-2 font-mono text-xs">`;
+                        this.leaderboardData.slice(0, 10).forEach((item, idx) => {
+                            let rankBadge = `${idx + 1}`;
+                            let rankColor = 'text-gray-400';
+                            if (idx === 0) { rankBadge = '🥇 1'; rankColor = 'text-king-gold font-bold'; }
+                            else if (idx === 1) { rankBadge = '🥈 2'; rankColor = 'text-gray-200 font-bold'; }
+                            else if (idx === 2) { rankBadge = '🥉 3'; rankColor = 'text-amber-600 font-bold'; }
+
+                            const isMe = currentUser && item.uid === currentUser.uid;
+
+                            html += `
+                                <div class="flex items-center justify-between p-3 rounded-xl ${isMe ? 'bg-king-gold/20 border border-king-gold' : 'bg-king-bg border border-king-border'}">
+                                    <div class="flex items-center gap-3">
+                                        <span class="w-8 text-center font-bold ${rankColor}">${rankBadge}</span>
+                                        <div>
+                                            <div class="font-bold text-white flex items-center gap-1.5">
+                                                ${item.nickname}
+                                                ${isMe ? '<span class="text-[9px] bg-king-gold text-black px-1 rounded font-sans">ME</span>' : ''}
+                                            </div>
+                                            <div class="text-[10px] text-gray-500">보유 훈장: ${item.badgesCount}개</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-sm font-black text-king-neonCyan">${item.highScore}</span>
+                                        <span class="text-[10px] text-gray-400"> pts</span>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        html += `</div>`;
+                        content.innerHTML = html;
+                    }
+                } else {
+                    let html = `<div class="grid grid-cols-2 gap-2 text-xs font-mono">`;
+                    SURVIVAL_TOPICS.forEach(topic => {
+                        const hasBadge = this.badges.includes(topic.badge);
+                        html += `
+                            <div class="p-3 rounded-xl border ${hasBadge ? 'bg-king-gold/10 border-king-gold' : 'bg-king-bg/50 border-king-border opacity-50'} flex items-start gap-2.5">
+                                <div class="p-2 rounded-lg ${hasBadge ? 'bg-king-gold text-black' : 'bg-gray-800 text-gray-500'} shrink-0">
+                                    <i data-lucide="${topic.icon || 'award'}" class="w-4 h-4"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-white text-[11px] leading-tight mb-1">${topic.badge}</p>
+                                    <p class="text-[10px] text-gray-400 leading-tight">${hasBadge ? topic.badgeDesc : '미획득 업적'}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += `</div>`;
+                    content.innerHTML = html;
+                }
+                lucide.createIcons();
+            }
+
+            goHome() {
+                if (this.timer) clearInterval(this.timer);
+                this.currentTopic = null;
+
+                const container = document.getElementById('appContainer');
+                let cardsHtml = '';
+
+                SURVIVAL_TOPICS.forEach(topic => {
+                    const best = this.scores[topic.id] || 0;
+                    cardsHtml += `
+                        <div class="panel-card bg-king-card border border-king-border rounded-2xl overflow-hidden hover:border-king-gold transition-all duration-300 flex flex-col justify-between group cursor-pointer shadow-xl" onclick="app.startTopic('${topic.id}')">
+                            <div class="relative h-44 overflow-hidden">
+                                <img src="${topic.image}" onerror="this.src='https://placehold.co/600x400/101420/ffd700?text=SURVIVAL'" alt="${topic.title}" class="panel-card-img w-full h-full object-cover">
+                                <div class="absolute inset-0 bg-gradient-to-t from-king-card via-transparent to-transparent"></div>
+                                <div class="absolute top-3 left-3 bg-red-600/90 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1 font-mono">
+                                    <i data-lucide="clock" class="w-3 h-3"></i> ${topic.time}
+                                </div>
+                                <div class="absolute top-3 right-3 bg-black/70 backdrop-blur-md border border-king-gold/40 text-king-gold text-[10px] font-bold px-2.5 py-1 rounded-md font-mono">
+                                    난이도 ★${topic.difficulty}
+                                </div>
+                            </div>
+
+                            <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1.5">
+                                        <i data-lucide="${topic.icon || 'shield'}" class="w-4 h-4 text-king-neonCyan"></i>
+                                        <h3 class="font-extrabold text-lg text-white group-hover:text-king-gold transition-colors">${topic.title}</h3>
+                                    </div>
+                                    <p class="text-xs text-gray-400 line-clamp-2 leading-relaxed">${topic.desc}</p>
+                                </div>
+
+                                <div class="pt-3 border-t border-king-border/60 flex items-center justify-between text-xs font-mono">
+                                    <span class="text-gray-400">내 최고 점수: <strong class="text-king-neonCyan font-black">${best}</strong> pts</span>
+                                    <button class="px-3 py-1.5 rounded-lg bg-king-gold/10 border border-king-gold/40 text-king-gold group-hover:bg-king-gold group-hover:text-black font-bold transition flex items-center gap-1">
+                                        도전 <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = `
+                    <div class="space-y-8">
+                        <div class="relative rounded-3xl overflow-hidden border-2 border-king-gold/60 p-6 md:p-10 bg-gradient-to-r from-king-card via-black to-king-card shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div class="space-y-4 max-w-xl">
+                                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/30 border border-red-500/50 text-red-400 text-xs font-mono font-bold">
+                                    <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span> 5초 한계 시간 제한 시스템 가동
+                                </div>
+                                <h2 class="text-2xl md:text-4xl font-black text-white leading-tight">
+                                    지옥의 5초 선택! <br><span class="shimmer-text">당신은 과연 생존할 수 있는가?</span>
+                                </h2>
+                                <p class="text-xs md:text-sm text-gray-300 leading-relaxed">
+                                    매 문항 5초 내 선택하지 못하면 즉시 대량의 체력 및 멘탈 데미지를 입습니다. 판단력과 순발력으로 극한 상황을 이겨내고 전 세계 생존 랭킹 1위에 도전하세요!
+                                </p>
+                            </div>
+                            <div class="w-full md:w-72 h-44 rounded-2xl overflow-hidden border-2 border-king-gold/50 relative shrink-0 shadow-2xl">
+                                <img src="${IMG_MAIN_HERO}" onerror="this.src='https://placehold.co/600x400/101420/ffd700?text=MAIN+HERO'" alt="메인 히어로" class="w-full h-full object-cover">
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg md:text-xl font-black text-white flex items-center gap-2">
+                                    <i data-lucide="flame" class="w-5 h-5 text-king-neonPink"></i> 생존 시뮬레이션 스테이지 선택
+                                </h3>
+                                <span class="text-xs text-gray-400 font-mono">총 ${SURVIVAL_TOPICS.length}개 테마 가동 중</span>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                ${cardsHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+            }
+
+            startTopic(topicId) {
+                const topic = SURVIVAL_TOPICS.find(t => t.id === topicId);
+                if (!topic) return;
+
+                this.currentTopic = topic;
+                this.currentStageIdx = 0;
+                this.hp = 100;
+                this.mental = 100;
+                this.score = 0;
+
+                this.renderStage();
+            }
+
+            renderStage() {
+                if (this.timer) clearInterval(this.timer);
+
+                const stage = this.currentTopic.stages[this.currentStageIdx];
+                const container = document.getElementById('appContainer');
+
+                container.innerHTML = `
+                    <div class="max-w-3xl mx-auto space-y-6">
+                        <!-- Upper Status Bar -->
+                        <div class="bg-king-card border border-king-border rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
+                            <div class="flex items-center gap-3 w-full md:w-auto">
+                                <button onclick="app.goHome()" class="p-2 rounded-xl bg-black border border-king-border hover:border-king-gold text-gray-400 hover:text-white transition">
+                                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                                </button>
+                                <div>
+                                    <span class="text-[10px] text-king-gold font-mono uppercase font-bold tracking-wider">${this.currentTopic.title}</span>
+                                    <h2 class="text-sm md:text-base font-extrabold text-white">${stage.title}</h2>
+                                </div>
+                            </div>
+
+                            <!-- Timer & Stats -->
+                            <div class="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto font-mono text-xs">
+                                <div class="flex items-center gap-4">
+                                    <div class="text-center">
+                                        <span class="text-[10px] text-gray-400">HP</span>
+                                        <div class="font-black text-red-400 text-sm">${this.hp}</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <span class="text-[10px] text-gray-400">MENTAL</span>
+                                        <div class="font-black text-king-neonCyan text-sm">${this.mental}</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <span class="text-[10px] text-gray-400">SCORE</span>
+                                        <div class="font-black text-king-gold text-sm">${this.score}</div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-2 pl-4 border-l border-king-border">
+                                    <div class="w-12 h-12 rounded-xl bg-red-950/60 border-2 border-red-500/80 flex items-center justify-center font-black text-xl text-red-400 shadow-[0_0_15px_rgba(255,0,85,0.4)]" id="timerBox">
+                                        5
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="w-full bg-king-card h-2 rounded-full overflow-hidden border border-king-border">
+                            <div class="bg-gradient-to-r from-king-neonCyan to-king-gold h-full transition-all duration-300" style="width: ${((this.currentStageIdx + 1) / this.currentTopic.stages.length) * 100}%"></div>
+                        </div>
+
+                        <!-- Narrative & Options Box -->
+                        <div class="bg-king-card border border-king-gold/50 rounded-2xl p-6 md:p-8 space-y-6 shadow-2xl relative overflow-hidden">
+                            <div class="text-xs font-mono text-king-gold flex items-center justify-between">
+                                <span>STAGE ${this.currentStageIdx + 1} / ${this.currentTopic.stages.length}</span>
+                                <span class="text-red-400 font-bold">⏱️ 5초 내 즉시 선택 필요</span>
+                            </div>
+
+                            <p class="text-base md:text-lg font-bold text-white leading-relaxed">
+                                "${stage.narrative}"
+                            </p>
+
+                            <div class="space-y-3 pt-2">
+                                ${stage.options.map((opt, idx) => `
+                                    <button onclick="app.selectOption(${idx})" class="w-full p-4 rounded-xl bg-king-bg border border-king-border hover:border-king-gold hover:bg-king-cardHover text-left text-sm font-medium text-gray-200 transition-all duration-200 flex items-center justify-between group">
+                                        <span class="pr-4 leading-normal">${opt.text}</span>
+                                        <i data-lucide="chevron-right" class="w-4 h-4 text-gray-500 group-hover:text-king-gold group-hover:translate-x-1 transition-all shrink-0"></i>
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+
+                this.timeLeft = 5;
+                const timerBox = document.getElementById('timerBox');
+                this.timer = setInterval(() => {
+                    this.timeLeft--;
+                    if (timerBox) timerBox.innerText = this.timeLeft;
+
+                    if (this.timeLeft <= 0) {
+                        clearInterval(this.timer);
+                        this.handleTimeOut();
+                    }
+                }, 1000);
+            }
+
+            handleTimeOut() {
+                audio.play('damage');
+                this.hp -= 25;
+                this.mental -= 25;
+                this.showFeedbackModal('시간 초과 타임아웃!', -25, -25, '5초 이내에 판단을 내리지 못해 극심한 패닉과 손상을 입었습니다.');
+            }
+
+            selectOption(idx) {
+                if (this.timer) clearInterval(this.timer);
+                const stage = this.currentTopic.stages[this.currentStageIdx];
+                const opt = stage.options[idx];
+
+                this.hp += opt.hp;
+                this.mental += opt.mental;
+
+                if (this.hp > 100) this.hp = 100;
+                if (this.mental > 100) this.mental = 100;
+
+                if (opt.hp >= 0 && opt.mental >= 0) {
+                    audio.play('correct');
+                    this.score += 150;
+                } else {
+                    audio.play('damage');
+                    this.score += 50;
+                }
+
+                this.showFeedbackModal('선택 결과 피드백', opt.hp, opt.mental, opt.feedback);
+            }
+
+            showFeedbackModal(title, hpChange, mentalChange, text) {
+                document.getElementById('feedbackTitle').innerText = title;
+                document.getElementById('feedbackHp').innerText = `HP: ${hpChange >= 0 ? '+' + hpChange : hpChange}`;
+                document.getElementById('feedbackMental').innerText = `Mental: ${mentalChange >= 0 ? '+' + mentalChange : mentalChange}`;
+                document.getElementById('feedbackText').innerText = text;
+
+                const iconContainer = document.getElementById('feedbackIconContainer');
+                const icon = document.getElementById('feedbackIcon');
+
+                if (hpChange >= 0 && mentalChange >= 0) {
+                    iconContainer.className = "w-16 h-16 rounded-full flex items-center justify-center mx-auto border-2 border-king-neonGreen bg-green-950/40 text-king-neonGreen";
+                    icon.setAttribute('data-lucide', 'check-circle-2');
+                } else {
+                    iconContainer.className = "w-16 h-16 rounded-full flex items-center justify-center mx-auto border-2 border-red-500 bg-red-950/40 text-red-500";
+                    icon.setAttribute('data-lucide', 'alert-triangle');
+                }
+                lucide.createIcons();
+
+                document.getElementById('feedbackModal').classList.remove('hidden');
+            }
+
+            closeFeedbackModal() {
+                document.getElementById('feedbackModal').classList.add('hidden');
+
+                if (this.hp <= 0 || this.mental <= 0) {
+                    this.renderGameOver();
+                } else {
+                    this.currentStageIdx++;
+                    if (this.currentStageIdx >= this.currentTopic.stages.length) {
+                        this.renderVictory();
+                    } else {
+                        this.renderStage();
+                    }
+                }
+            }
+
+            async renderVictory() {
+                audio.play('victory');
+                if (typeof confetti === 'function') {
+                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                }
+
+                if (!this.badges.includes(this.currentTopic.badge)) {
+                    this.badges.push(this.currentTopic.badge);
+                    localStorage.setItem('sk_badges', JSON.stringify(this.badges));
+                }
+
+                const prevScore = this.scores[this.currentTopic.id] || 0;
+                if (this.score > prevScore) {
+                    this.scores[this.currentTopic.id] = this.score;
+                    localStorage.setItem('sk_scores', JSON.stringify(this.scores));
+                }
+
+                await this.saveUserScoreToFirebase();
+
+                const container = document.getElementById('appContainer');
+                container.innerHTML = `
+                    <div class="max-w-xl mx-auto bg-king-card border-2 border-king-gold rounded-3xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
+                        <div class="w-20 h-20 rounded-full bg-king-gold/20 border-2 border-king-gold flex items-center justify-center mx-auto text-king-gold">
+                            <i data-lucide="crown" class="w-10 h-10"></i>
+                        </div>
+
+                        <div>
+                            <span class="text-xs font-mono text-king-gold font-bold tracking-widest uppercase">STAGE SURVIVED!</span>
+                            <h2 class="text-2xl md:text-3xl font-black text-white mt-1">${this.currentTopic.title} 완주 성공!</h2>
+                        </div>
+
+                        <div class="bg-black/60 p-4 rounded-2xl border border-king-border space-y-2 font-mono text-sm">
+                            <div class="flex justify-between text-gray-400"><span>최종 달성 점수</span><strong class="text-king-gold font-black">${this.score} pts</strong></div>
+                            <div class="flex justify-between text-gray-400"><span>남은 HP</span><strong class="text-red-400 font-bold">${this.hp} / 100</strong></div>
+                            <div class="flex justify-between text-gray-400"><span>남은 Mental</span><strong class="text-king-neonCyan font-bold">${this.mental} / 100</strong></div>
+                        </div>
+
+                        <div class="p-4 rounded-xl bg-king-gold/10 border border-king-gold/40 text-left flex items-center gap-3">
+                            <div class="p-2 bg-king-gold text-black rounded-lg shrink-0">
+                                <i data-lucide="award" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-king-gold">획득 업적 훈장</p>
+                                <p class="text-sm font-extrabold text-white">${this.currentTopic.badge}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button onclick="app.goHome()" class="flex-1 py-3.5 rounded-xl bg-king-bg border border-king-border text-gray-300 font-bold text-sm hover:border-king-gold transition">
+                                메인 메뉴로
+                            </button>
+                            <button onclick="app.startTopic('${this.currentTopic.id}')" class="flex-1 py-3.5 rounded-xl bg-king-gold text-black font-extrabold text-sm hover:bg-amber-300 transition shadow-lg">
+                                다시 도전하기
+                            </button>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+            }
+
+            renderGameOver() {
+                audio.play('gameover');
+                const container = document.getElementById('appContainer');
+
+                container.innerHTML = `
+                    <div class="max-w-xl mx-auto bg-king-card border-2 border-red-600 rounded-3xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
+                        <div class="w-20 h-20 rounded-full bg-red-950/60 border-2 border-red-500 flex items-center justify-center mx-auto text-red-500">
+                            <i data-lucide="skull" class="w-10 h-10"></i>
+                        </div>
+
+                        <div>
+                            <span class="text-xs font-mono text-red-500 font-bold tracking-widest uppercase">SURVIVAL FAILED</span>
+                            <h2 class="text-2xl md:text-3xl font-black text-white mt-1">생존 실패...</h2>
+                            <p class="text-xs text-gray-400 mt-2">체력 또는 멘탈이 고갈되어 사회적/신체적으로 퇴출당했습니다.</p>
+                        </div>
+
+                        <div class="bg-black/60 p-4 rounded-2xl border border-king-border space-y-2 font-mono text-sm">
+                            <div class="flex justify-between text-gray-400"><span>달성한 STAGE</span><strong class="text-white font-bold">${this.currentStageIdx + 1} / ${this.currentTopic.stages.length}</strong></div>
+                            <div class="flex justify-between text-gray-400"><span>획득 점수</span><strong class="text-king-gold font-black">${this.score} pts</strong></div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button onclick="app.goHome()" class="flex-1 py-3.5 rounded-xl bg-king-bg border border-king-border text-gray-300 font-bold text-sm hover:border-king-gold transition">
+                                메인 메뉴로
+                            </button>
+                            <button onclick="app.startTopic('${this.currentTopic.id}')" class="flex-1 py-3.5 rounded-xl bg-red-600 text-white font-extrabold text-sm hover:bg-red-500 transition shadow-lg">
+                                재도전하기
+                            </button>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+            }
+        }
+
+        window.app = new SurvivalApp();
+        window.onload = () => {
+            window.app.init();
+        };
+    </script>
+</body>
+</html>
