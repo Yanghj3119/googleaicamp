@@ -1,0 +1,3019 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>생존왕 THE ZOMBIE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700;900&display=swap');
+        body { 
+            font-family: 'Noto Sans KR', sans-serif; 
+            margin: 0; 
+            background-color: #0a0505; 
+            color: #f8f8f2; 
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #110b0b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #3a1f1f; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #d84b4b; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fade-in { animation: fadeIn 0.8s ease-out forwards; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const MAX_LOGS = 200;
+        const BASE_INVENTORY_SIZE = 7;
+
+        const WEAPONS = ['shotgun', 'pistol', 'machete', 'bat', 'baton', 'knife'];
+
+        const WEAPON_ROLES = {
+          shotgun: { name: '샷건', desc: '💥 광역 소탕: 좀비 무리를 일격에 박살내며 완전 방어' },
+          pistol: { name: '권총', desc: '🔫 원거리 사격: 반격 위험 없이 좀비를 저지' },
+          machete: { name: '마체테', desc: '🗡️ 강하게 베기: 강력한 근접 부위 절단 및 장애물 파쇄' },
+          bat: { name: '야구 배트', desc: '🏏 무력화 둔기: 좀비를 뇌진탕시켜 안전 탈출 기회 확보' },
+          baton: { name: '진압봉', desc: '🚓 호신 방어: 좀비 공격 충격을 흡수하여 피격 피해 최소화' },
+          knife: { name: '군용 단검', desc: '🔪 은밀 암살: 소음 없이 급소를 노리고 정밀 작업 가능' }
+        };
+
+        const NORMAL_LOGS = {
+          sheltered: [
+            "천장에서 새는 물을 빈 깡통으로 받쳐둡니다.",
+            "가방을 열어 물건들을 정돈하며 마음을 다잡습니다.",
+            "은신처를 보수하며 빈틈이 없는지 안전을 재확인합니다.",
+            "창밖을 내다보며 멀리 지나가는 감염자들의 무리를 관찰합니다."
+          ],
+          unsheltered: [
+            "버려진 차량 밑에 숨어 감염자들을 피합니다.",
+            "발소리를 죽이며 골목길을 이동합니다.",
+            "안전한 곳을 찾기 위해 쓰레기통을 뒤집니다.",
+            "어둠 속에서 익숙하지 않은 부스럭거리는 소리가 들려 긴장합니다."
+          ]
+        };
+
+        const DEATH_MESSAGES = {
+          health: [
+            "치명적인 부상을 극복하지 못하고 과다출혈로 차가운 바닥에 쓰러졌습니다.",
+            "감염자들의 맹렬한 공격에 온몸이 찢겨 나가며 의식을 잃었습니다.",
+            "누적된 외상과 상처의 감염을 견디지 못하고 고통 속에 숨을 거두었습니다.",
+            "몸을 지탱할 힘마저 사라지고, 피로 물든 어둠 속으로 거두어졌습니다."
+          ],
+          hunger: [
+            "며칠 동안 계속된 극심한 기아를 이기지 못하고 영양실조로 쓰러졌습니다.",
+            "극도의 배고픔에 환각을 보다가 조용히 숨이 끊어졌습니다.",
+            "속이 타들어가는 갈증과 아사를 견디지 못하고 피폐해진 채 생을 마감했습니다.",
+            "더 이상 걸을 기력조차 남아있지 않아 시체들 사이에서 고요히 멈춰 섰습니다."
+          ],
+          mental: [
+            "끝없는 공포와 절망을 견디지 못하고 스스로 이성을 놓아버렸습니다.",
+            "광기에 사로잡혀 무모하게 좀비 떼 속으로 뛰어들고 말았습니다.",
+            "정신적 붕괴를 이기지 못하고 어둠 속에서 환청에 시달리다 최후를 맞이했습니다.",
+            "생존에 대한 모든 희망을 잃고 스스로 삶의 끈을 놓아버렸습니다."
+          ],
+          hygiene: [
+            "세균 감염과 악성 패혈증이 온몸에 퍼져 고열 속에서 괴로워하다 사망했습니다.",
+            "부패한 환경에서 유입된 유독 바이러스로 인해 장기가 파괴되어 숨졌습니다.",
+            "비위생적인 환경으로 인한 오염병에 걸려 몸을 떨다 쓰러졌습니다."
+          ],
+          unknown: [
+            "가혹한 아포칼립스의 황무지 속에서 무참히 목숨을 잃었습니다.",
+            "알 수 없는 차가운 밤의 어둠 속에서 조용히 사라졌습니다."
+          ]
+        };
+
+        const LOCATIONS = [
+          { id: 'street', name: '도심 거리', desc: '위험성이 적당하며 생존자를 마주칠 확률이 있습니다.', distance: 0 },
+          { id: 'police_station', name: '관할 경찰서', desc: '총기 및 탄약, 경찰용 장비를 수색할 수 있지만 감염된 경찰관들이 배회합니다.', distance: 3 },
+          { id: 'gas_station', name: '폐주유소', desc: '기름과 차 부품을 구하기 용이하지만 유독가스와 화재 위험이 있습니다.', distance: 2 },
+          { id: 'hospital', name: '폐병원', desc: '의약품을 찾기 용이하지만 감염자 위험이 큽니다.', distance: 3 },
+          { id: 'mart', name: '대형 마트', desc: '식량이 풍부하지만 약탈자와의 분쟁이 잦습니다.', distance: 2 },
+          { id: 'military', name: '군부대 진지', desc: '강력한 무기를 얻을 수 있으나 무장한 군인 감염자가 출몰합니다.', distance: 5 },
+          { id: 'subway', name: '지하철역', desc: '어둡고 밀폐되어 멘탈 소모가 크지만 은신처를 발견할 수 있습니다.', distance: 4 },
+          { id: 'highway', name: '외곽 고속도로', desc: '버려진 자동차가 길을 막고 있지만 멀리 이동하기 적합합니다.', distance: 6 },
+          { id: 'school', name: '버려진 초등학교', desc: '보건실과 급식실에서 생존 물품을 찾을 수 있습니다.', distance: 3 },
+          { id: 'broadcasting', name: '폐방송국', desc: '통신 장비 및 고가치가 있는 소모품을 수색할 수 있습니다.', distance: 4 },
+          { id: 'port', name: '항구 물류창고', desc: '컨테이너 속 유용한 대량의 보급품이 잠들어 있습니다.', distance: 7 },
+          { id: 'laboratory', name: '질병통제연구소', desc: '백신 연구가 진행되었던 시설입니다. 생물재해 위험이 있습니다.', distance: 8 },
+          { id: 'airport', name: '국제 공항', desc: '광활한 활주로와 버려진 항공기들이 있는 곳. 특별한 탈출 수단을 찾을 수 있을지도 모릅니다.', distance: 12 },
+          { id: 'controlled_area', name: '군사 통제구역', desc: '정부군이 방어선을 구축한 안전지대입니다. 최후의 보루입니다.', distance: 10 }
+        ];
+
+        const RESPAWN_LOCATIONS = [
+          { id: 'alley', name: '피빛 골목길', hasShelter: false, log: "피와 악취가 진동하는 골목길 구석에서 정신을 차렸습니다." },
+          { id: 'subway_tunnel', name: '지하철 선로 통로', hasShelter: false, log: "어두컴컴한 지하철 선로 한복판에서 눈을 떴습니다." },
+          { id: 'highway', name: '버려진 고속도로', hasShelter: false, log: "뒤얽힌 고속도로 차 안에서 깨어났습니다." }
+        ];
+
+        const TRAITS_POOL = [
+          { id: 'strong', name: '💪 강인한 신체', desc: '최대 건강 120' },
+          { id: 'calm', name: '🧠 냉철한 정신', desc: '정신력 감소 속도 50% 완화' },
+          { id: 'eagle_eye', name: '🦅 매의 눈', desc: '파밍 시 추가 이득 보너스' },
+          { id: 'clean_freak', name: '🧼 결벽증', desc: '위생 상태가 좋을 때 정신력 추가 회복' }
+        ];
+
+        const START_ITEMS_POOL = ['bat', 'medkit', 'ration', 'nutrition_bar', 'soju', 'soap', 'wet_wipes', 'radio', 'gas_can', 'pet_food', 'chocolate', 'coffee', 'machete'];
+
+        const VEHICLE_TYPES = {
+          bicycle: { name: '🚲 자전거', speedMult: 0.5, type: 'stamina', costPerDist: 8, desc: '기름이 필요 없지만 허기와 체력을 추가 소모합니다.' },
+          kickboard: { name: '🛴 전동 킥보드', speedMult: 0.4, type: 'battery', maxCap: 100, costPerDist: 20, desc: '빠르고 조용하지만 배터리가 소모됩니다.' },
+          motorcycle: { name: '🏍️ 오토바이', speedMult: 0.3, type: 'fuel', maxCap: 100, costPerDist: 15, desc: '기능이 뛰어나며 기름을 사용합니다.' },
+          car: { name: '🚗 SUV 자동차', speedMult: 0.25, type: 'fuel', maxCap: 100, costPerDist: 25, desc: '안전하고 대량 파밍 가능. 기름 소모가 큰 편입니다.' }
+        };
+
+        const EVENTS = [
+          {
+            id: 'airport_scenario_1',
+            condition: (state) => state.currentLocation === 'airport',
+            text: "[장소 시나리오: 국제 공항] 무너진 수화물 검색대 주변에 짐가방들이 흩어져 있습니다.",
+            choices: [
+              {
+                text: "짐가방들을 샅샅이 뒤진다.",
+                action: () => {
+                  if(Math.random() < 0.6) return { itemsGained: ['medkit', 'battery_pack'], log: "버려진 가방에서 구급상자와 휴대용 배터리를 찾았습니다!" };
+                  return { stats: { health: -15 }, log: "가방 속에서 튀어나온 감염된 보안요원에게 물릴 뻔했습니다." };
+                }
+              },
+              { text: "조심스럽게 우회한다.", action: () => ({ log: "검색대를 조용히 우회했습니다." }) }
+            ]
+          },
+          {
+            id: 'airport_scenario_2',
+            condition: (state) => state.currentLocation === 'airport',
+            text: "[장소 시나리오: 국제 공항] 불이 꺼진 면세점 구역에 고급 기호품들이 남아 있을 것 같습니다.",
+            choices: [
+              {
+                text: "면세점 안으로 진입한다.",
+                action: () => {
+                  const gained = Math.random() < 0.5 ? ['chocolate', 'coffee'] : ['cigarette'];
+                  return { itemsGained: gained, log: "면세점에서 소중한 기호품들을 확보했습니다!" };
+                }
+              },
+              { text: "어두워서 위험해 보이니 지나친다.", action: () => ({ log: "면세점 구역을 뒤로하고 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'airport_scenario_3',
+            condition: (state) => state.currentLocation === 'airport',
+            text: "[장소 시나리오: 국제 공항] 활주로 주변에 버려진 항공유 운반 차량이 서 있습니다.",
+            choices: [
+              {
+                text: "차량에서 연료를 추출해본다.",
+                action: () => {
+                  if(Math.random() < 0.7) return { itemsGained: ['gas_can'], log: "차량에서 소중한 [휘발유 캔]을 추출해냈습니다!" };
+                  return { stats: { health: -10, hygiene: -15 }, log: "연료가 유출되며 불길이 일어 화상을 입었습니다." };
+                }
+              },
+              { text: "폭발 위험을 피해 멀어진다.", action: () => ({ log: "차량 근처에서 조용히 멀어졌습니다." }) }
+            ]
+          },
+          {
+            id: 'laboratory_blackbox_signal',
+            condition: (state) => !state.travelState && ['laboratory', 'police_station', 'hospital', 'school', 'broadcasting'].includes(state.currentLocation) &&
+              !state.flags.chipScenarioStarted && !state.flags.chipScenarioResolved &&
+              !state.inventory.includes('semiconductor_chip') && Math.random() < 0.12,
+            text: "[미확인 신호] 이 장소 깊숙한 곳에서 낮은 전자음이 반복됩니다. 주변 장비는 대부분 멈췄지만, 한쪽 구석의 비상 전력 패널에는 희미한 불빛이 남아 있습니다.",
+            choices: [
+              {
+                text: "비상 전력 패널을 조작해 잠금장치를 해제한다.",
+                action: () => ({ flags: { chipScenarioStarted: true, chipScenarioUnlocked: true }, stats: { mental: -5 }, log: "⚡ 비상 전력이 잠깐 살아나며 잠겨 있던 장치가 열렸습니다. 안쪽에서 정밀 장비가 작동하는 소리가 들립니다." })
+              },
+              {
+                text: "불길한 신호를 무시하고 이곳을 떠난다.",
+                action: () => ({ flags: { chipScenarioResolved: true }, log: "정체를 알 수 없는 장비를 뒤로하고 장소를 떠났습니다." })
+              }
+            ]
+          },
+          {
+            id: 'laboratory_chip_recovery',
+            condition: (state) => !state.travelState && ['laboratory', 'police_station', 'hospital', 'school', 'broadcasting'].includes(state.currentLocation) &&
+              state.flags.chipScenarioUnlocked && !state.flags.chipScenarioResolved &&
+              !state.inventory.includes('semiconductor_chip'),
+            text: "[특별 시나리오: 봉인된 장치] 독립 전원으로 유지된 분석 장치가 작동하고 있습니다. 중앙의 차폐 케이스 안에서 손톱만 한 물체가 푸른 빛을 반사합니다. 케이스를 열려면 주변 장비를 조심스럽게 분리해야 합니다.",
+            choices: [
+              {
+                text: "주변 장비를 분리해 차폐 케이스를 연다.",
+                action: () => ({ itemsGained: ['semiconductor_chip'], flags: { chipScenarioResolved: true }, stats: { mental: +5 }, log: "🧩 차폐 케이스에서 정체를 알 수 없는 특수 반도체칩을 회수했습니다. 칩 표면에는 아직 읽을 수 없는 식별 코드가 남아 있습니다." })
+              },
+              {
+                text: "위험을 감수하지 않고 장치를 봉인한다.",
+                action: () => ({ flags: { chipScenarioResolved: true }, log: "장비를 건드리지 않고 장치를 다시 봉인했습니다. 안쪽의 전자음이 희미해집니다." })
+              }
+            ]
+          },
+          {
+            id: 'ending_betrayal',
+            condition: (state) => state.companions.length >= 2 && state.companions.every(c => c.loyalty <= 35) && Math.floor(state.counters.totalHours / 24) >= 7,
+            text: "[생존자의 결말] 구조 헬기가 마침내 도착했습니다! 하지만 그동안의 억압과 배고픔에 분노한 동료들의 눈빛이 심상치 않습니다...",
+            choices: [
+              {
+                text: "헬기를 향해 달려간다.",
+                action: () => {
+                  return { flags: { triggerBetrayalEnding: true }, log: "동료들이 당신을 밀치고 헬기를 장악했습니다!" };
+                }
+              }
+            ]
+          },
+          {
+            id: 'ending_mutant',
+            condition: (state) => Math.floor(state.counters.totalHours / 24) >= 5 && state.stats.hygiene <= 50 && state.stats.mental <= 50 && (state.currentLocation === 'hospital' || state.currentLocation === 'controlled_area'),
+            text: "[생존자의 결말] 몸 속에 퍼진 바이러스가 마침내 뇌를 잠식하기 시작합니다. 그러나 당신의 강인한 의지는 이성을 잃는 것을 거부합니다...",
+            choices: [
+              {
+                text: "변이를 받아들이고 새로운 힘에 눈을 뜬다.",
+                action: () => {
+                  return { flags: { triggerMutantEnding: true }, log: "감염자들의 포효가 마치 복종의 언어처럼 들려옵니다..." };
+                }
+              }
+            ]
+          },
+          {
+            id: 'ending_chip_protocol',
+            condition: (state) => {
+              const required = ['pharmacist', 'nurse', 'police', 'chef'];
+              return !state.travelState && required.every(id => state.companions.some(c => c.id === id)) &&
+                state.inventory.includes('semiconductor_chip');
+            },
+            text: "[최후의 프로토콜] 약사 혁준, 간호사 서연, 경찰관 지헌, 요리사 홍형이 반도체칩을 중심으로 모였습니다. 각자의 전문성을 결합하면 연구소의 생존자 지원 프로토콜을 재가동해 안전한 거점을 만들 수 있습니다.",
+            choices: [
+              {
+                text: "네 동료와 함께 반도체칩 프로토콜을 가동한다. (생존 엔딩)",
+                action: () => ({ flags: { triggerChipEnding: true }, log: "🧩 네 동료의 협력으로 반도체칩 기반 생존 프로토콜이 가동되었습니다. 생존자들을 보호할 수 있는 거점이 마련됩니다!" })
+              }
+            ]
+          },
+          {
+            id: 'ending_plane',
+            condition: (state) => state.currentLocation === 'airport' && state.inventory.includes('gas_can') &&
+              state.companions.some(c => c.id === 'engineer'),
+            text: "[탈출 기회] 공항에서 버려진 비행기를 발견했습니다. 연료는 확보했지만, 엔진을 점검하고 비행기를 안전하게 가동하려면 공학자 제민의 도움이 필요합니다.",
+            choices: [
+              {
+                text: "공학자와 함께 비행기에 연료를 주입하고 엔진을 가동한다!",
+                action: () => {
+                  return { itemsLost: ['gas_can'], flags: { triggerPlaneEnding: true }, log: "제민이 엔진을 점검한 뒤 연료를 주입합니다. 엔진이 굉음을 내며 비행기가 활주로를 달리기 시작합니다!" };
+                }
+              }
+            ]
+          },
+          {
+            id: 'sudden_ambush_no_choice',
+            condition: (state) => state.currentLocation !== 'controlled_area' && Math.random() < 0.08,
+            text: "[기습 피해] 어둠 속에서 소리 접근한 감염자에게 갑작스러운 기습을 당했습니다! 피하거나 방어할 선택지조차 없습니다!",
+            choices: [
+              {
+                text: "[피해를 감수한다]",
+                action: (inv, counters, trait, companions) => {
+                  const cIds = companions.map(c => c.id);
+                  const hasWildBeasts = cIds.includes('military_dog') && cIds.includes('stray_cat');
+                  if (hasWildBeasts) {
+                    return { stats: { health: -5, mental: -5 }, log: "🐾 [시너지: 야생의 동반자] 야생 동반자들이 기습을 미리 눈치채고 경고하여 피해를 크게 줄였습니다!" };
+                  }
+                  return { stats: { health: -30, mental: -20 }, log: "무방비 상태로 끔찍한 기습을 당해 치명적인 피해를 입었습니다!" };
+                }
+              }
+            ]
+          },
+          {
+            id: 'find_smoke_items',
+            condition: (state) => (state.currentLocation === 'street' || state.currentLocation === 'subway') && Math.random() < 0.2,
+            text: "[수색] 구석진 곳에 버려진 낡은 재떨이와 누군가 벗어둔 점퍼가 떨어져 있습니다.",
+            choices: [
+              {
+                text: "점퍼 주머니를 조심스럽게 확인한다.",
+                action: () => {
+                  if (Math.random() < 0.7) return { itemsGained: ['cigarette', 'lighter'], log: "점퍼 주머니에서 온전한 [담배]와 [라이터]를 획득했습니다!" };
+                  return { stats: { health: -5 }, log: "주머니 속에 있던 날카로운 파편에 손을 베였습니다." };
+                }
+              },
+              { text: "그냥 지나친다.", action: () => ({ log: "점퍼를 뒤로하고 길을 나섰습니다." }) }
+            ]
+          },
+          {
+            id: 'zombie_horde_attack',
+            condition: (state) => state.currentLocation !== 'controlled_area',
+            text: "[습격] 시간이 지나며 더 수적으로 증가한 좀비 무리가 갑자기 들이닥쳤습니다!",
+            choices: [
+              {
+                text: "무기를 휘두르며 맞서 싸운다.",
+                action: (inv) => {
+                  if (inv.includes('shotgun')) return { useWeapon: 'shotgun', stats: { health: 0, mental: +10 }, log: "[CRITICAL!] 💥 샷건의 굉음과 함께 좀비의 머리가 터져 나갑니다!" };
+                  if (inv.includes('pistol')) return { useWeapon: 'pistol', stats: { health: 0, mental: +5 }, log: "[CRITICAL!] 🔫 날카로운 총성과 함께 좀비의 미간에 구멍이 뚫립니다!" };
+                  if (inv.includes('machete')) return { useWeapon: 'machete', stats: { health: -5, mental: 0 }, log: "[CRITICAL!] 🗡️ 마체테가 번뜩이며 좀비의 팔다리가 숭텅 잘려 나갑니다!" };
+                  if (inv.includes('baton')) return { useWeapon: 'baton', stats: { health: -8, mental: -5 }, log: "[CRITICAL!] 🚓 진압봉으로 좀비의 턱을 박살내며 뼈가 부러지는 소리가 울립니다!" };
+                  if (inv.includes('bat')) return { useWeapon: 'bat', stats: { health: -10, mental: -5 }, log: "[CRITICAL!] 🏏 묵직한 파열음과 함께 좀비의 두개골이 산산조각 납니다!" };
+                  if (inv.includes('knife')) return { useWeapon: 'knife', stats: { health: -12, mental: -5 }, log: "[CRITICAL!] 🔪 단검으로 좀비의 급소를 무자비하게 난도질합니다!" };
+                  return { stats: { health: -25, mental: -15 }, log: "맨손으로 싸우다 호되게 물리고 다쳤습니다." };
+                }
+              },
+              {
+                text: "재빨리 주변 장애물 뒤로 숨는다.",
+                action: () => {
+                  if (Math.random() < 0.4) return { stats: { mental: -10 }, log: "숨을 죽이고 긴 기다림 끝에 좀비들을 보냈습니다." };
+                  return { stats: { health: -20, mental: -20 }, log: "발각되어 기습당했습니다!" };
+                }
+              }
+            ]
+          },
+          {
+            id: 'special_zombie_ambush',
+            condition: (state) => state.currentLocation !== 'controlled_area' && Math.floor(state.counters.totalHours / 24) >= 1,
+            text: "[특수 좀비 출몰] 시간이 흐를수록 더욱 거세진 괴이하게 변이된 대형 특수 좀비가 포효하며 돌진해옵니다!",
+            choices: [
+              {
+                text: "무기로 약점을 공략한다.",
+                action: (inv) => {
+                  if (inv.includes('shotgun')) return { useWeapon: 'shotgun', stats: { health: 0, mental: +10 }, itemsGained: ['medkit'], log: "[CRITICAL!] 💥 샷건의 굉음과 함께 좀비의 머리가 터져 나갑니다!" };
+                  if (inv.includes('pistol')) return { useWeapon: 'pistol', stats: { health: -3, mental: +5 }, itemsGained: ['medkit'], log: "[CRITICAL!] 🔫 날카로운 총성과 함께 좀비의 미간에 구멍이 뚫립니다!" };
+                  if (inv.includes('machete')) return { useWeapon: 'machete', stats: { health: -10, mental: -5 }, itemsGained: ['medkit'], log: "[CRITICAL!] 🗡️ 마체테가 번뜩이며 좀비의 팔다리가 숭텅 잘려 나갑니다!" };
+                  if (inv.includes('knife')) return { useWeapon: 'knife', stats: { health: -12, mental: -5 }, itemsGained: ['medkit'], log: "[CRITICAL!] 🔪 단검으로 좀비의 급소를 무자비하게 난도질합니다!" };
+                  if (inv.includes('baton')) return { useWeapon: 'baton', stats: { health: -15, mental: -10 }, itemsGained: ['medkit'], log: "[CRITICAL!] 🚓 진압봉으로 좀비의 턱을 박살내며 뼈가 부러지는 소리가 울립니다!" };
+                  if (inv.includes('bat')) return { useWeapon: 'bat', stats: { health: -18, mental: -10 }, itemsGained: ['medkit'], log: "[CRITICAL!] 🏏 묵직한 파열음과 함께 좀비의 두개골이 산산조각 납니다!" };
+                  return { stats: { health: -35, mental: -20 }, log: "강력한 힘에 밀려 심각한 타격을 입었습니다." };
+                }
+              },
+              {
+                text: "소지품이나 식량을 던져 시선을 분산시키고 도망친다.",
+                action: (inv) => {
+                  if (inv.includes('ration')) return { itemsLost: ['ration'], log: "전투식량을 던져 놈이 멈칫한 틈에 무사히 도망쳤습니다." };
+                  return { stats: { health: -30, mental: -15 }, log: "던질 만한 물건이 없어 도망치다 매섭게 공격당했습니다." };
+                }
+              }
+            ]
+          },
+          {
+            id: 'police_armory',
+            condition: (state) => state.currentLocation === 'police_station',
+            text: "[장소 시나리오: 관할 경찰서] 철제로 이중 잠금 처리된 경찰서 지하 무기고 입구를 발견했습니다.",
+            choices: [
+              {
+                text: "도구를 사용해 강제로 무기고 문을 개척한다.",
+                action: (inv) => {
+                  if (inv.includes('machete')) return { useWeapon: 'machete', itemsGained: ['shotgun'], log: "🗡️ 마체테로 단단한 문고리를 내리쳐 파괴하고 [샷건]을 구했습니다!" };
+                  if (inv.includes('knife')) return { useWeapon: 'knife', itemsGained: ['pistol'], log: "🔪 단검으로 잠금장치를 정밀하게 따서 [권총]을 획득했습니다!" };
+                  const w = inv.find(item => ['bat', 'baton'].includes(item));
+                  if (w) {
+                    const gainedWeapon = Math.random() < 0.4 ? 'shotgun' : 'pistol';
+                    return { useWeapon: w, itemsGained: [gainedWeapon], log: `무기고를 강제로 개척하여 [${gainedWeapon === 'shotgun' ? '샷건' : '권총'}]을 획득했습니다!` };
+                  }
+                  return { stats: { health: -10 }, log: "적절한 도구가 없어 손만 베이고 문을 열지 못했습니다." };
+                }
+              },
+              {
+                text: "주변 데스크와 서랍에서 비상 열쇠를 탐색한다.",
+                action: () => {
+                  if (Math.random() < 0.35) return { itemsGained: ['pistol'], log: "서랍 안쪽 비밀 수납함에서 38구경 권총을 발견했습니다!" };
+                  return { stats: { mental: -5 }, log: "열쇠를 찾지 못하고 시간만 허비했습니다." };
+                }
+              },
+              { text: "소음 발생이 우려되어 그냥 지나친다.", action: () => ({ log: "무기고를 뒤로하고 복도를 벗어났습니다." }) }
+            ]
+          },
+          {
+            id: 'police_evidence_room',
+            condition: (state) => state.currentLocation === 'police_station',
+            text: "[장소 시나리오: 관할 경찰서] 봉인 테이프가 찢겨 있는 증거물 보관실 문이 살짝 열려 있습니다.",
+            choices: [
+              {
+                text: "내부 증거물 선반을 수색한다.",
+                action: () => {
+                  const rand = Math.random();
+                  if (rand < 0.3) return { itemsGained: ['machete'], log: "증거물 상자 속에서 날카로운 마체테를 발견했습니다!" };
+                  if (rand < 0.6) return { itemsGained: ['baton', 'wet_wipes'], log: "진압봉과 위생용 물티슈를 챙겼습니다." };
+                  return { stats: { health: -15 }, log: "어둠 속에서 잠복해 있던 감염된 경찰관의 기습을 받았습니다!" };
+                }
+              },
+              { text: "위험을 느껴 방을 지나친다.", action: () => ({ log: "증거물 보관실을 우회하여 이동했습니다." }) }
+            ]
+          },
+          {
+            id: 'street_broken_atm',
+            condition: (state) => state.currentLocation === 'street',
+            text: "[장소 시나리오: 도심 거리] 파손된 자판기와 부서진 ATM이 길가에 방치되어 있습니다.",
+            choices: [
+              {
+                text: "자판기 내부를 도구로 털어본다.",
+                action: (inv) => {
+                  const w = inv.find(item => ['machete', 'knife', 'baton', 'bat'].includes(item));
+                  if (w) {
+                    return { useWeapon: w, itemsGained: ['chocolate', 'coffee'], log: "자판기를 부수고 초콜릿과 캔커피를 찾아냈습니다!" };
+                  }
+                  return { stats: { hunger: -10 }, log: "도구가 없어 힘만 빼고 수확이 없었습니다." };
+                }
+              },
+              { text: "그냥 지난친다.", action: () => ({ log: "거리를 계속 이동합니다." }) }
+            ]
+          },
+          {
+            id: 'street_barricade',
+            condition: (state) => state.currentLocation === 'street',
+            text: "[장소 시나리오: 도심 거리] 방치된 바리케이드와 경찰 차량 잔해가 길을 막고 있습니다.",
+            choices: [
+              {
+                text: "경찰차 내부를 수색한다.",
+                action: () => {
+                  const rand = Math.random();
+                  if (rand < 0.35) return { itemsGained: ['baton'], log: "경찰차 좌석 밑에서 진압봉을 구했습니다!" };
+                  if (rand < 0.50) return { itemsGained: ['pistol'], log: "글로브 박스 깊은 곳에서 [권총]을 찾아냈습니다!" };
+                  return { stats: { health: -10 }, log: "깨진 유리창에 베여 상처를 입었습니다." };
+                }
+              },
+              { text: "바리케이드를 우회한다.", action: () => ({ log: "조심스럽게 바리케이드를 돌아서 넘어갔습니다." }) }
+            ]
+          },
+          {
+            id: 'gas_station_scavenge',
+            condition: (state) => state.currentLocation === 'gas_station',
+            text: "[장소 시나리오: 폐주유소] 주유소 정비소 문이 단단히 잠겨 있습니다. 내부엔 기름통과 유용한 도구가 보입니다.",
+            choices: [
+              {
+                text: "유리창을 깨고 진입한다.",
+                action: () => {
+                  if (Math.random() < 0.5) return { itemsGained: ['gas_can', 'pet_food'], stats: { mental: +5 }, log: "유리창을 깨고 들어가 휘발유와 반려동물 사료를 챙겼습니다!" };
+                  return { stats: { health: -15 }, log: "유리 조각에 다치고 좀비 소음 어그로를 끌었습니다." };
+                }
+              },
+              {
+                text: "도구(마체테/단검/배트)로 잠금장치를 강제로 비틀어 연다.",
+                action: (inv) => {
+                  const w = inv.find(item => ['machete', 'knife', 'bat'].includes(item));
+                  if (w) return { useWeapon: w, itemsGained: ['gas_can'], log: "성공적으로 정비소 문을 따고 [휘발유 캔]을 구했습니다." };
+                  return { stats: { hunger: -15 }, log: "도구가 없어 힘만 쏟고 실패했습니다." };
+                }
+              },
+              { text: "위험하니 그냥 돌아선다.", action: () => ({ log: "주유소를 뒤로하고 떠났습니다." }) }
+            ]
+          },
+          {
+            id: 'gas_station_tanker',
+            condition: (state) => state.currentLocation === 'gas_station',
+            text: "[장소 시나리오: 폐주유소] 방치된 유류 수송 탱크로리 차량이 누출 가스를 풍기며 멈춰 서 있습니다.",
+            choices: [
+              {
+                text: "호스를 연결해 남은 기름을 수거한다.",
+                action: () => {
+                  if (Math.random() < 0.5) return { itemsGained: ['gas_can'], log: "탱크 하부에서 유용한 [휘발유 캔]을 추출했습니다!" };
+                  return { stats: { health: -15, hygiene: -20 }, log: "유독 가스를 마시고 기름을 뒤집어썼습니다." };
+                }
+              },
+              { text: "폭발 위험이 있으니 멀어진다.", action: () => ({ log: "탱크로리를 피해 멀찍이 이동했습니다." }) }
+            ]
+          },
+          {
+            id: 'gas_station_convenience',
+            condition: (state) => state.currentLocation === 'gas_station',
+            text: "[장소 시나리오: 폐주유소] 주유소에 병설된 소형 편의점 창고 문이 살짝 열려 있습니다.",
+            choices: [
+              {
+                text: "창고 안을 살핀다.",
+                action: () => ({ itemsGained: ['coffee', 'wet_wipes'], log: "창고 안에서 캔커피와 물티슈를 발견했습니다!" })
+              },
+              { text: "그냥 지나친다.", action: () => ({ log: "편의점을 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'mart_scavenge',
+            condition: (state) => state.currentLocation === 'mart',
+            text: "[장소 시나리오: 대형 마트] 엉망이 된 마트 진열대 사이로 봉인된 식량 박스가 눈에 띕니다.",
+            choices: [
+              {
+                text: "박스를 개봉해 물자를 챙긴다.",
+                action: () => {
+                  if (Math.random() < 0.5) return { itemsGained: ['ration', 'chocolate'], log: "식량 박스에서 전투식량과 초콜릿을 획득했습니다!" };
+                  return { stats: { health: -10 }, log: "박스 밑에 있던 좀비 손에 매복 공격을 받았습니다." };
+                }
+              },
+              { text: "소음이 날 수 있으니 건드리지 않는다.", action: () => ({ log: "조심스럽게 진열대 사이를 빠져나왔습니다." }) }
+            ]
+          },
+          {
+            id: 'mart_warehouse_loot',
+            condition: (state) => state.currentLocation === 'mart',
+            text: "[장소 시나리오: 대형 마트] 마트 뒤편 창고에 유통기한이 얼마 남지 않은 대량의 통조림 묶음이 쌓여 있습니다.",
+            choices: [
+              {
+                text: "식량을 최대한 가방에 챙긴다.",
+                action: () => ({ itemsGained: ['ration'], log: "통조림과 전투식량을 챙겼습니다!" })
+              },
+              {
+                text: "약탈자의 함정인지 조심스럽게 살핀다.",
+                action: () => ({ stats: { mental: +5 }, itemsGained: ['ration'], log: "안전을 확인한 후 식량을 확보했습니다." })
+              }
+            ]
+          },
+          {
+            id: 'mart_pharmacy_scavenge',
+            condition: (state) => state.currentLocation === 'mart',
+            text: "[장소 시나리오: 대형 마트] 마트 내부에 위치한 구급 약국 코너의 셔터가 반쯤 부서져 있습니다.",
+            choices: [
+              {
+                text: "기어 들어가 약품을 수색한다.",
+                action: () => {
+                  if (Math.random() < 0.5) return { itemsGained: ['medkit'], log: "약국 선반에서 보존 상태가 좋은 [구급상자]를 발견했습니다!" };
+                  return { stats: { health: -15 }, log: "셔터 틈에 걸려 다쳤습니다." };
+                }
+              },
+              { text: "지나친다.", action: () => ({ log: "약국 코너를 뒤로했습니다." }) }
+            ]
+          },
+          {
+            id: 'hospital_icu',
+            condition: (state) => state.currentLocation === 'hospital',
+            text: "[장소 시나리오: 폐병원] 집중치료실(ICU) 복도에 의료 장비와 의약품 상자가 박혀 있습니다.",
+            choices: [
+              {
+                text: "의료 상자를 꼼꼼히 탐색한다.",
+                action: () => ({ itemsGained: ['medkit', 'soap'], log: "구급상자와 비누 등 위생용품을 구했습니다!" })
+              },
+              {
+                text: "병원 감염 위험을 우려해 신속히 지나친다.",
+                action: () => ({ stats: { hygiene: -5 }, log: "신속히 오염 구역을 벗어났습니다." })
+              }
+            ]
+          },
+          {
+            id: 'hospital_morgue',
+            condition: (state) => state.currentLocation === 'hospital',
+            text: "[장소 시나리오: 폐병원] 지하 영안실 문이 열려 있고 오한이 서립니다. 안쪽에 비상 구급품이 보입니다.",
+            choices: [
+              {
+                text: "위험을 무릅쓰고 영안실로 들어간다.",
+                action: () => {
+                  if (Math.random() < 0.4) return { itemsGained: ['medkit'], stats: { mental: -10 }, log: "소름 끼치는 분위기를 견디고 구급상자를 챙겼습니다!" };
+                  return { stats: { health: -20, mental: -20 }, log: "깨어난 시체에 급습당해 상처를 입었습니다!" };
+                }
+              },
+              { text: "발걸음을 돌린다.", action: () => ({ log: "차가운 공기를 뒤로하고 철수했습니다." }) }
+            ]
+          },
+          {
+            id: 'military_armory',
+            condition: (state) => state.currentLocation === 'military',
+            text: "[장소 시나리오: 군부대 진지] 굳게 닫힌 탄약고/무기고 문이 보입니다.",
+            choices: [
+              {
+                text: "단검이나 도구로 문고리를 강제로 따본다.",
+                action: (inv) => {
+                  const w = inv.find(item => ['machete', 'knife', 'baton'].includes(item));
+                  if (w) {
+                    const extraWeapon = Math.random() < 0.3 ? 'shotgun' : 'knife';
+                    return { useWeapon: w, itemsGained: [extraWeapon, 'ration'], log: `무기고를 열어 [${extraWeapon === 'shotgun' ? '샷건' : '군용 단검'}]과 전투식량을 획득했습니다!` };
+                  }
+                  return { stats: { health: -10 }, log: "강철 문을 열지 못하고 손만 다쳤습니다." };
+                }
+              },
+              { text: "경계 태세를 유지하며 지나친다.", action: () => ({ log: "탄약고를 뒤로하고 이동합니다." }) }
+            ]
+          },
+          {
+            id: 'military_bunker',
+            condition: (state) => state.currentLocation === 'military',
+            text: "[장소 시나리오: 군부대 진지] 지하 지휘 벙커로 연결되는 계단이 어둠 속에 묻혀 있습니다.",
+            choices: [
+              {
+                text: "조명을 켜고 벙커 진입을 시도한다.",
+                action: () => {
+                  if (Math.random() < 0.4) return { itemsGained: ['radio', 'ration'], log: "벙커 내부에서 작동하는 무전기와 C-정식을 확보했습니다!" };
+                  return { stats: { health: -25 }, log: "무장한 군인 좀비의 기습을 받아 다쳤습니다." };
+                }
+              },
+              { text: "지하 진입을 포기한다.", action: () => ({ log: "위험한 지하 벙커를 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'subway_control_room',
+            condition: (state) => state.currentLocation === 'subway',
+            text: "[장소 시나리오: 지하철역] 역무 통제실 문이 잠겨 있으나 창문 안쪽에 캐비닛이 보입니다.",
+            choices: [
+              {
+                text: "창문을 깨고 내부 수색을 진행한다.",
+                action: () => ({ itemsGained: ['battery_pack', 'wet_wipes'], log: "통제실 안에서 휴대용 배터리와 물티슈를 찾았습니다!" })
+              },
+              { text: "어둠 속 소음을 피해 이동한다.", action: () => ({ stats: { mental: -5 }, log: "어두운 선로를 따라 계속 걸었습니다." }) }
+            ]
+          },
+          {
+            id: 'subway_vending_machine',
+            condition: (state) => state.currentLocation === 'subway',
+            text: "[장소 시나리오: 지하철역] 승강장에 쓰러져 있는 매점 자판기 아래 물건들이 흐트러져 있습니다.",
+            choices: [
+              {
+                text: "자판기 주변을 샅샅이 뒤진다.",
+                action: () => ({ itemsGained: ['chocolate'], log: "달콤한 초콜릿을 발견하여 기운을 차립니다!" })
+              },
+              { text: "그냥 지나친다.", action: () => ({ log: "승강장을 떠났습니다." }) }
+            ]
+          },
+          {
+            id: 'highway_tour_bus',
+            condition: (state) => state.currentLocation === 'highway',
+            text: "[장소 시나리오: 외곽 고속도로] 도로 한복판에 멈춰 선 대형 관광버스가 방치되어 있습니다.",
+            choices: [
+              {
+                text: "버스 내부의 승객 짐가방들을 뒤진다.",
+                action: () => {
+                  if (Math.random() < 0.5) return { itemsGained: ['wet_wipes', 'chocolate'], log: "짐가방에서 물티슈와 초콜릿을 구했습니다!" };
+                  return { stats: { health: -15 }, log: "좌석에 갇혀있던 감염자에게 발목을 물릴 뻔했습니다." };
+                }
+              },
+              { text: "차량 사이로 우회한다.", action: () => ({ log: "관광버스를 돌아 지나쳐갔습니다." }) }
+            ]
+          },
+          {
+            id: 'highway_cargo_truck',
+            condition: (state) => state.currentLocation === 'highway',
+            text: "[장소 시나리오: 외곽 고속도로] 전복된 대형 화물 트럭의 컨테이너가 열려 있습니다.",
+            choices: [
+              {
+                text: "화물칸 내부로 들어가 물자를 수색한다.",
+                action: () => {
+                  const gained = Math.random() < 0.2 ? 'machete' : 'gas_can';
+                  return { itemsGained: [gained], log: `화물칸에서 [${gained === 'machete' ? '마체테' : '휘발유 캔'}]을(를) 얻었습니다!` };
+                }
+              },
+              { text: "안전을 위해 그냥 떠난다.", action: () => ({ log: "전복된 트럭을 뒤로하고 걸어갔습니다." }) }
+            ]
+          },
+          {
+            id: 'school_cafeteria',
+            condition: (state) => state.currentLocation === 'school',
+            text: "[장소 시나리오: 초등학교] 급식실 창고 문이 가볍게 닫혀 있습니다. 대량의 대용량 통조림 식량이 보입니다.",
+            choices: [
+              {
+                text: "창고 내부를 수색해 식량을 확보한다.",
+                action: () => ({ itemsGained: ['ration', 'wet_wipes'], log: "급식실 창고에서 유용한 식량과 물티슈를 찾았습니다!" })
+              },
+              { text: "소리를 죽이고 교실 쪽으로 빠져나간다.", action: () => ({ log: "급식실을 살금살금 빠져나왔습니다." }) }
+            ]
+          },
+          {
+            id: 'school_infirmary',
+            condition: (state) => state.currentLocation === 'school',
+            text: "[장소 시나리오: 초등학교] 1층 보건실의 구급함이 벽에 걸려 있습니다.",
+            choices: [
+              {
+                text: "보건실 구급함을 털어본다.",
+                action: () => {
+                  if (Math.random() < 0.5) return { itemsGained: ['medkit', 'soap'], log: "보건실 약장에서 구급상자와 비누를 챙겼습니다!" };
+                  return { stats: { health: -10 }, log: "침대 뒤에 숨어있던 어린 감염자의 기습에 손을 물릴 뻔했습니다." };
+                }
+              },
+              { text: "그냥 지나친다.", action: () => ({ log: "보건실을 뒤로했습니다." }) }
+            ]
+          },
+          {
+            id: 'broadcasting_studio',
+            condition: (state) => state.currentLocation === 'broadcasting',
+            text: "[장소 시나리오: 폐방송국] 메인 스튜디오에 비상용 백업 발전기와 방치된 방송 기기들이 널려 있습니다.",
+            choices: [
+              {
+                text: "부품을 추출해 배터리와 유용한 도구를 구한다.",
+                action: () => ({ itemsGained: ['battery_pack', 'radio'], log: "방송 장비에서 충전된 [휴대용 배터리]와 [무전기]를 추출했습니다!" })
+              },
+              { text: "복잡한 내부 스튜디오를 탈출한다.", action: () => ({ log: "스튜디오 조명 아래를 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'broadcasting_canteen',
+            condition: (state) => state.currentLocation === 'broadcasting',
+            text: "[장소 시나리오: 폐방송국] 방송국 지하 스태프 매점이 깔끔하게 보존되어 있습니다.",
+            choices: [
+              {
+                text: "매점 셔터를 올려 물품을 챙긴다.",
+                action: () => ({ itemsGained: ['chocolate', 'coffee'], log: "매점 안에서 초콜릿과 캔커피를 획득했습니다!" })
+              },
+              { text: "소음 발생을 방지하기 위해 이동한다.", action: () => ({ log: "매점을 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'port_container',
+            condition: (state) => state.currentLocation === 'port',
+            text: "[장소 시나리오: 항구 물류창고] 수입 컨테이너 하나가 잠금장치가 해제된 채 열려 있습니다.",
+            choices: [
+              {
+                text: "컨테이너 내부로 들어가 물자를 수색한다.",
+                action: () => {
+                  if (Math.random() < 0.5) return { itemsGained: ['gas_can', 'ration'], log: "컨테이너 속 유류 캔과 식량 상자를 대량 획득했습니다!" };
+                  return { stats: { health: -15 }, log: "컨테이너 안쪽에 갇혀있던 좀비에게 습격당했습니다." };
+                }
+              },
+              { text: "함정일지 모르니 지나친다.", action: () => ({ log: "컨테이너 단지를 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'port_lighthouse',
+            condition: (state) => state.currentLocation === 'port',
+            text: "[장소 시나리오: 항구 물류창고] 항구 끝자락 등대 초소가 고요하게 서 있습니다. 잠시 쉬어가기 좋은 장소입니다.",
+            choices: [
+              {
+                text: "등대 안으로 들어가 긴장을 풀고 휴식을 취한다.",
+                action: () => ({ stats: { mental: +25, health: +10 }, log: "탁 트인 바다를 바라보며 정신력을 크게 회복했습니다." })
+              },
+              {
+                text: "등대 내부 서치라이트 장비를 뒤져본다.",
+                action: () => ({ itemsGained: ['battery_pack'], log: "등대 조명 기기에서 고용량 배터리를 추출했습니다." })
+              }
+            ]
+          },
+          {
+            id: 'recruitment_police',
+            condition: (state) => (state.currentLocation === 'street' || state.currentLocation === 'police_station') && !state.companions.some(c => c.id === 'police'),
+            text: "[생존자 구출] 감염자 무리에 싸여 권총 탄약이 떨어진 경찰관 '지헌'을 마주쳤습니다!",
+            choices: [
+              {
+                text: "무기를 휘두르며 엄호하여 구출한다.",
+                action: (inv) => {
+                  const w = inv.find(item => WEAPONS.includes(item));
+                  if (w) {
+                    return {
+                      useWeapon: w,
+                      stats: { mental: +20 },
+                      addCompanion: { id: 'police', role: '경찰관', name: '지헌', desc: '👮 피격 피해 35% 절감', loyalty: 85, affinity: 70 },
+                      log: "지헌을 감염자 무리에서 구출했습니다! (패시브: 피격 피해 35% 절감)"
+                    };
+                  }
+                  return { stats: { health: -25 }, log: "무기가 없어 구출에 실패하고 부상을 입었습니다." };
+                }
+              },
+              { text: "위험하니 외면하고 지나친다.", action: () => ({ log: "경찰관을 외면하고 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'recruitment_pharmacist',
+            condition: (state) => (state.currentLocation === 'hospital' || state.currentLocation === 'mart') && !state.companions.some(c => c.id === 'pharmacist'),
+            text: "[생존자 조우] 약국 선반 구석에 숨어 조용히 의약품을 정돈하던 약사 '혁준'을 만났습니다.",
+            choices: [
+              {
+                text: "식량이나 소주를 건네며 합류를 제안한다.",
+                action: (inv) => {
+                  if (inv.includes('ration') || inv.includes('soju')) {
+                    const itemToLose = inv.includes('ration') ? 'ration' : 'soju';
+                    return {
+                      itemsLost: [itemToLose], stats: { mental: +15 },
+                      addCompanion: { id: 'pharmacist', role: '약사', name: '혁준', desc: '💊 구급상자 회복량 +20 & 오염 패널티 완화', loyalty: 80, affinity: 75 },
+                      log: "혁준이 동료로 합류했습니다! (패시브: 구급상자 회복량 증가 & 위생 감염 완화)"
+                    };
+                  }
+                  return { stats: { mental: -5 }, log: "나눠줄 물품이 부족해 설득에 실패했습니다." };
+                }
+              },
+              {
+                text: "의약품을 함께 나누고 서로 돕자고 설득한다.",
+                action: () => ({
+                  stats: { mental: +10 },
+                  addCompanion: { id: 'pharmacist', role: '약사', name: '혁준', desc: '💊 구급상자 회복량 +20 & 오염 패널티 완화', loyalty: 65, affinity: 55 },
+                  log: "혁준이 서로 협력하자는 제안을 받아들여 동료로 합류했습니다! (기본 충성도)"
+                })
+              },
+              { text: "그를 두고 돌아선다.", action: () => ({ log: "약사를 뒤로하고 떠났습니다." }) }
+            ]
+          },
+          {
+            id: 'find_vehicle_kickboard',
+            condition: (state) => !state.vehicle && (state.travelState ? Math.random() < 0.22 : (state.currentLocation === 'street' || state.currentLocation === 'school') && Math.random() < 0.8),
+            text: "[탈것 발견] 길가에 거의 새것 같은 전동 킥보드가 세워져 있습니다! 배터리가 조금 남아있어 보입니다.",
+            choices: [
+              {
+                text: "전동 킥보드를 획득한다.",
+                action: () => ({ setVehicle: { id: 'kickboard', cap: 60 }, log: "전동 킥보드를 확보했습니다! 이동 시간이 단축됩니다." })
+              },
+              {
+                text: "배터리를 분해해 부품만 챙긴다.",
+                action: () => ({ itemsGained: ['battery_pack'], log: "킥보드에서 휴대용 배터리를 추출했습니다." })
+              },
+              { text: "지나친다.", action: () => ({ log: "킥보드를 남겨두고 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'find_vehicle_car',
+            condition: (state) => !state.vehicle && (state.travelState ? Math.random() < 0.22 : (state.currentLocation === 'gas_station' || state.currentLocation === 'highway' || state.currentLocation === 'mart') && Math.random() < 0.8),
+            text: "[탈것 발견] 방치된 SUV 차를 발견했습니다. 열쇠가 꽂혀 있고 약간의 기름이 남아있습니다!",
+            choices: [
+              {
+                text: "차량에 탑승한다.",
+                action: () => ({ setVehicle: { id: 'car', cap: 40 }, log: "SUV 자동차를 확보했습니다! 주행 시 기름이 소모됩니다." })
+              },
+              {
+                text: "차량 연료통에서 기름만 호스로 빼낸다.",
+                action: () => ({ itemsGained: ['gas_can'], log: "기름을 캔에 받아 [휘발유 캔]을 챙겼습니다." })
+              },
+              { text: "버려두고 지나친다.", action: () => ({ log: "차량을 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'recruitment_dog',
+            condition: (state) => !state.companions.some(c => c.id === 'military_dog') && Math.random() < 0.08,
+            text: "[애완동물 조우] 철창 뒤에서 목줄을 찬 훈련된 군견 '제로'가 굶주린 채 컹컹 짖고 있습니다!",
+            choices: [
+              {
+                text: "사료나 전투식량을 주며 다가간다.",
+                action: (inv) => {
+                  if (inv.includes('pet_food') || inv.includes('ration')) {
+                    const itemLost = inv.includes('pet_food') ? 'pet_food' : 'ration';
+                    return {
+                      itemsLost: [itemLost], stats: { mental: +25 },
+                      addCompanion: { id: 'military_dog', role: '군견', name: '제로', desc: '🐕 전투 시 피해 감쇄 & 위험 경고', loyalty: 90, affinity: 80 },
+                      log: "군견 '제로'가 꼬리를 치며 신뢰를 보জীবী 신뢰를 보입니다! 든든한 동료가 되었습니다."
+                    };
+                  }
+                  return { stats: { mental: -5 }, log: "먹을 것이 없어 군견이 경계하며 으르렁거립니다." };
+                }
+              },
+              {
+                text: "조심스럽게 손을 내밀어 쓰다듬어본다.",
+                action: () => {
+                  if (Math.random() < 0.18) {
+                    return { addCompanion: { id: 'military_dog', role: '군견', name: '제로', desc: '🐕 전투 시 피해 감쇄 & 위험 경고', loyalty: 60, affinity: 60 }, log: "진심이 통했는지 군견 제로가 당신을 따르기 시작합니다!" };
+                  }
+                  return { stats: { health: -15 }, log: "위협을 느낀 군견에게 손을 물렸습니다." };
+                }
+              },
+              { text: "무시하고 지나친다.", action: () => ({ log: "군견을 뒤로하고 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'recruitment_cat',
+            condition: (state) => !state.companions.some(c => c.id === 'stray_cat') && Math.random() < 0.2,
+            text: "[애완동물 조우] 박스 더미 위에서 작은 길고양이 '나비'가 위태롭게 웅크리고 있습니다.",
+            choices: [
+              {
+                text: "안아들고 함께 가자고 달랜다.",
+                action: () => ({
+                  stats: { mental: +20 },
+                  addCompanion: { id: 'stray_cat', role: '길고양이', name: '나비', desc: '🐈 탐색 이득 보너스 & 정신력 치유', loyalty: 70, affinity: 85 },
+                  log: "길고양이 '나비'가 당신의 품에 안겼습니다! (정신력 치유 효과)"
+                })
+              },
+              {
+                text: "먹을 것을 가방에서 꺼내놓아 준다.",
+                action: (inv) => {
+                  if(inv.includes('pet_food') || inv.includes('ration')) {
+                    const itemLost = inv.includes('pet_food') ? 'pet_food' : 'ration';
+                    return { itemsLost: [itemLost], addCompanion: { id: 'stray_cat', role: '길고양이', name: '나비', desc: '🐈 탐색 이득 보너스 & 정신력 치유', loyalty: 95, affinity: 100 }, log: "고양이가 감사의 그르렁 소리를 내며 완전히 마음을 열었습니다." };
+                  }
+                  return { log: "먹을 것이 없어 고양이의 관심이 멀어졌습니다." };
+                }
+              },
+              { text: "지나친다.", action: () => ({ log: "고양이를 두고 걸음을 옮깁니다." }) }
+            ]
+          },
+          {
+            id: 'water_outage',
+            condition: (state) => state.counters.hasShelter && state.counters.totalHours >= 24 && !state.flags.water_outage,
+            text: "[단수 발생] 수돗물이 완전히 끊겼습니다. 변기 수조의 물이라도 마셔야 할지 갈등됩니다.",
+            choices: [
+              {
+                text: "눈 딱 감고 마신다.",
+                action: () => ({ stats: { health: -15, hunger: +40, mental: -15, hygiene: -20 }, flags: { water_outage: true }, log: "비위가 상하지만 갈증은 해소되었습니다." })
+              },
+              {
+                text: "소주나 불로 소독해 마신다.",
+                action: (inv) => {
+                  if (inv.includes('soju') || inv.includes('lighter')) {
+                    return { stats: { health: 0, hunger: +50, mental: +10 }, flags: { water_outage: true }, log: "소독하여 안전하게 갈증을 해소했습니다!" };
+                  }
+                  return { stats: { health: -20, hunger: +30, mental: -10 }, flags: { water_outage: true }, log: "소독 도구가 없어 탈이 났습니다." };
+                }
+              },
+              {
+                text: "베란다에 나가 빗물이나 이슬을 모아본다.",
+                action: () => {
+                  if (Math.random() < 0.48) return { stats: { hunger: +20, mental: +5 }, flags: { water_outage: true }, log: "운 운 좋게 약간의 깨끗한 물을 모아 마셨습니다." };
+                  return { stats: { mental: -15 }, flags: { water_outage: true }, log: "물은 모이지 않았고 헛고생만 하여 기운이 빠집니다." };
+                }
+              },
+              {
+                text: "포기하고 그냥 참는다.",
+                action: () => ({ stats: { health: -10, hunger: -15, mental: -5 }, flags: { water_outage: true }, log: "극심한 갈증으로 컨디션이 저하되었습니다." })
+              }
+            ]
+          },
+          {
+            id: 'abandoned_backpack',
+            condition: () => true,
+            text: "[수색] 수풀 속에서 구멍이 뚫린 피 묻은 배낭을 발견했습니다.",
+            choices: [
+              {
+                text: "조심스럽게 내용물을 뒤진다.",
+                action: () => {
+                  const gained = Math.random() < 0.5 ? ['ration'] : ['wet_wipes'];
+                  return { itemsGained: gained, log: "배낭 속에서 유용한 생존 물품을 찾아냈습니다!" };
+                }
+              },
+              {
+                text: "막대기나 도구로 찔러 안전을 먼저 확인한다.",
+                action: (inv) => {
+                  const w = inv.find(item => ['machete', 'bat', 'baton'].includes(item));
+                  if (w) {
+                    return { useWeapon: w, itemsGained: ['soap'], stats: { mental: +5 }, log: "배낭 밑에 숨어있던 뱀을 쫓아내고 물건을 안전히 챙겼습니다." };
+                  }
+                  return { stats: { timeMod: 1.5 }, log: "주변의 나뭇가지를 찾느라 시간만 낭비했고 가방은 비어있었습니다." };
+                }
+              },
+              { text: "무시한다.", action: () => ({ log: "배낭을 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'stranger_knocking',
+            condition: (state) => state.counters.hasShelter,
+            text: "[경계] 은신처 문을 누군가 격렬하게 두드립니다! '제발 문 좀 열어주세요!'",
+            choices: [
+              {
+                text: "문을 열어 들여보낸다.",
+                action: () => {
+                  if (Math.random() < 0.5) return { stats: { mental: +20 }, itemsGained: ['medkit'], log: "구해준 낯선 이가 감사의 표시로 [구급상자]를 주고 떠났습니다." };
+                  return { stats: { health: -25, mental: -20 }, log: "괴한은 변장한 약탈자였습니다! 기습당해 다치고 물자를 빼앗길 뻔했습니다." };
+                }
+              },
+              {
+                text: "숨을 죽이고 무시한다.",
+                action: () => ({ stats: { mental: -10 }, log: "밖에서 비명소리가 들리다 조용해졌습니다." })
+              },
+              {
+                text: "무기를 쥐고 문틈으로 위협한다.",
+                action: (inv) => {
+                  const w = inv.find(item => WEAPONS.includes(item));
+                  if (w) return { useWeapon: w, stats: { mental: +5 }, log: "무기를 보자 낯선 이는 겁을 먹고 도망쳤습니다." };
+                  return { stats: { mental: -15 }, log: "무기가 없는 것을 눈치챈 낯선 이가 문을 발로 차고 도망갔습니다." };
+                }
+              },
+              { text: "문 너머로 대화만 시도한다.", action: () => ({ stats: { mental: -5 }, log: "'가까이 오지 마!'라고 소리치자 상대는 절망하며 떠났습니다." }) }
+            ]
+          },
+          {
+            id: 'corpse_hygiene',
+            condition: (state) => state.stats.hygiene <= 40,
+            text: "[악취] 길가에 부패한 시체와 파리떼가 가득합니다. 세균 감염 위험이 큽니다.",
+            choices: [
+              {
+                text: "위생용품(비누/물티슈)을 사용해 정화한다.",
+                action: (inv) => {
+                  if (inv.includes('soap')) return { itemsLost: ['soap'], stats: { hygiene: +50, mental: +10 }, log: "비누로 몸을 씻어 오염을 방지했습니다." };
+                  if (inv.includes('wet_wipes')) return { itemsLost: ['wet_wipes'], stats: { hygiene: +30 }, log: "물티슈로 몸을 닦아냈습니다." };
+                  return { stats: { health: -10, hygiene: -15 }, log: "위생 도구가 없어 오염물에 지속 노출되었습니다." };
+                }
+              },
+              {
+                text: "옷가지로 코와 입을 단단히 막고 빠르게 돌파한다.",
+                action: () => ({ stats: { hunger: -15, hygiene: -5 }, log: "체력을 소모해 빠르게 구역을 벗어났습니다." })
+              },
+              {
+                text: "위험을 감수하고 시체를 뒤져본다.",
+                action: () => {
+                  if(Math.random() < 0.3) return { stats: { health: -5, hygiene: -30 }, itemsGained: ['ration'], log: "시체 품에서 식량을 얻었지만 심하게 오염되었습니다." };
+                  return { stats: { health: -15, hygiene: -40, mental: -20 }, log: "시체가 갑자기 움직여 물리며 큰 피해를 입었습니다!" };
+                }
+              },
+              { text: "우회한다.", action: () => ({ stats: { mental: -10, hygiene: -10 }, log: "악취를 참으며 먼 길로 우회했습니다." }) }
+            ]
+          },
+          {
+            id: 'acid_rain',
+            condition: (state) => !state.counters.hasShelter && Math.random() < 0.15,
+            text: "[기후] 피부를 쏘는 듯한 검은 유독성 산성비가 내리기 시작합니다!",
+            choices: [
+              {
+                text: "건물 처마 밑으로 피신한다.",
+                action: () => ({ stats: { health: -5, mental: -5 }, log: "비가 그칠 때까지 대기했습니다." })
+              },
+              {
+                text: "버려진 우산이나 박스를 찾아 뒤집어쓴다.",
+                action: () => {
+                  if(Math.random() < 0.5) return { stats: { mental: +5 }, log: "버려진 비닐 천막을 발견해 무사히 비를 피했습니다." };
+                  return { stats: { health: -15, hygiene: -20 }, log: "적당한 것을 찾지 못해 비를 다 맞았습니다." };
+                }
+              },
+              {
+                text: "강행 돌파한다.",
+                action: () => ({ stats: { health: -20, hygiene: -30 }, log: "산성비에 피부 화상을 입고 위생이 크게 악화되었습니다." })
+              }
+            ]
+          },
+          {
+            id: 'weather_fog',
+            condition: (state) => !state.counters.hasShelter && Math.random() < 0.1,
+            text: "[기후] 한 치 앞도 보이지 않는 짙은 핏빛 안개가 꼈습니다. 주변에서 기괴한 소음이 들려옵니다.",
+            choices: [
+              {
+                text: "제자리에 웅크려 안개가 걷히길 기다린다.",
+                action: () => {
+                  if (Math.random() < 0.6) return { stats: { mental: -10, hunger: -10 }, log: "긴장 속에서 시간을 허비했지만 무사히 안개가 걷혔습니다." };
+                  return { stats: { health: -20, mental: -15 }, log: "안개 속에서 다가온 감염자에게 기습당했습니다!" };
+                }
+              },
+              {
+                text: "방향 감각을 믿고 천천히 이동한다.",
+                action: (inv, counters, trait, companions) => {
+                  if (companions.some(c => c.id === 'military_dog' || c.id === 'stray_cat')) {
+                    return { stats: { mental: +5 }, log: "동물의 예민한 감각 덕분에 안개를 뚫고 안전하게 벗어났습니다!" };
+                  }
+                  return { stats: { health: -15, timeMod: 1.5 }, log: "길을 잃고 헤매다 찰과상을 입었습니다." };
+                }
+              }
+            ]
+          },
+          {
+            id: 'weather_heatwave',
+            condition: (state) => Math.random() < 0.1,
+            text: "[기후] 숨이 막힐 듯한 끔찍한 폭염이 찾아왔습니다. 탈수 증세가 오기 시작합니다.",
+            choices: [
+              {
+                text: "물티슈나 음료(커피)로 체온을 낮춘다.",
+                action: (inv) => {
+                  if (inv.includes('wet_wipes')) return { itemsLost: ['wet_wipes'], stats: { health: +5, mental: +10 }, log: "물티슈로 몸을 닦아내어 폭염을 견뎌냈습니다." };
+                  if (inv.includes('coffee')) return { itemsLost: ['coffee'], stats: { hunger: +10, mental: +15 }, log: "음료를 섭취해 탈수를 막았습니다." };
+                  return { stats: { health: -20, hunger: -20 }, log: "사용할 물품이 없어 극심한 탈수와 일사병에 시달립니다." };
+                }
+              },
+              {
+                text: "그늘진 곳을 찾아 강제로 휴식한다.",
+                action: () => ({ stats: { hunger: -15, mental: -5 }, log: "갈증을 참으며 억지로 그늘에서 버텼습니다." })
+              }
+            ]
+          },
+          {
+            id: 'weather_coldwave',
+            condition: (state) => Math.random() < 0.1,
+            text: "[기후] 뼛속까지 시린 살인적인 한파가 불어닥칩니다. 체온이 급격히 떨어집니다.",
+            choices: [
+              {
+                text: "라이터로 작은 불을 피워 몸을 녹인다.",
+                action: (inv) => {
+                  if (inv.includes('lighter')) return { stats: { mental: +15 }, log: "라이터로 불씨를 만들어 언 몸을 녹였습니다." };
+                  return { stats: { health: -25, mental: -15 }, log: "불을 피울 도구가 없어 동상에 걸리고 말았습니다." };
+                }
+              },
+              {
+                text: "소주나 커피를 마셔 속을 데운다.",
+                action: (inv) => {
+                  if (inv.includes('soju')) return { itemsLost: ['soju'], stats: { mental: +20, health: -5 }, log: "소주를 마셔 일시적으로 추위를 잊었습니다." };
+                  if (inv.includes('coffee')) return { itemsLost: ['coffee'], stats: { mental: +15 }, log: "커피를 마셔 체온을 조금 회복했습니다." };
+                  return { stats: { health: -20, mental: -10 }, log: "마실 것이 없어 추위에 몸을 웅크린 채 고통받았습니다." };
+                }
+              },
+              {
+                text: "추위를 잊기 위해 무작정 걷는다.",
+                action: () => ({ stats: { health: -15, hunger: -20 }, log: "체력을 심하게 소모하며 간신히 한파를 이겨냈습니다." })
+              }
+            ]
+          },
+          {
+            id: 'recruitment_soldier',
+            condition: (state) => state.counters.totalHours >= 24 && !state.companions.some(c => c.id === 'soldier'),
+            text: "[생존자 조우] 퇴역 군인 '박상사'가 물자를 나눠주면 합류하겠다고 합니다.",
+            choices: [
+              {
+                text: "물품을 내어주고 영입한다.",
+                action: (inv) => {
+                  if (inv.includes('ration') || inv.includes('medkit')) {
+                    const itemToLose = inv.includes('ration') ? 'ration' : 'medkit';
+                    return {
+                      stats: { mental: +20 }, itemsLost: [itemToLose],
+                      addCompanion: { id: 'soldier', role: '군인', name: '박상사', desc: '🛡️ 전투 피격 피해 30% 절감', loyalty: 65, affinity: 50 },
+                      log: "박상사가 동료로 합류했습니다! (패시브: 전투 피격 피해 절감)"
+                    };
+                  }
+                  return { stats: { mental: -5 }, log: "물품이 부족해 그를 돌려보냈습니다." };
+                }
+              },
+              {
+                text: "기습하여 물품만 빼앗는다.",
+                action: (inv) => {
+                  const w = inv.find(item => WEAPONS.includes(item));
+                  if(w) return { useWeapon: w, stats: { health: -15, mental: -20 }, itemsGained: ['ration'], log: "부상을 입었지만 그의 식량을 뺏어 달아났습니다." };
+                  return { stats: { health: -40 }, log: "박상사의 반격에 뼈가 부러질 정도로 맞았습니다." };
+                }
+              },
+              { text: "지나친다.", action: () => ({ log: "그를 뒤로하고 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'recruitment_nurse',
+            condition: (state) => state.counters.totalHours >= 36 && !state.companions.some(c => c.id === 'nurse'),
+            text: "[구출] 감염자들에게 포위된 여성 간호사 '서연'을 발견했습니다!",
+            choices: [
+              {
+                text: "무기로 구출해낸다.",
+                action: (inv) => {
+                  const w = inv.find(item => WEAPONS.includes(item));
+                  if (w) {
+                    return {
+                      useWeapon: w,
+                      stats: { mental: +20 },
+                      addCompanion: { id: 'nurse', role: '간호사', name: '서연', desc: '💉 인벤토리 +1 & 지속적 체력 회복', loyalty: 80, affinity: 60 },
+                      log: "서연을 구출했습니다! (패시브: 인벤토리 +1 & 체력 회복)"
+                    };
+                  }
+                  return { stats: { health: -20 }, log: "적절한 무기가 없어 구출에 실패하고 부상만 입었습니다." };
+                }
+              },
+              {
+                text: "주변의 돌을 던져 감염자의 시선을 끈다.",
+                action: () => {
+                  if(Math.random() < 0.5) {
+                    return { stats: { mental: +10 }, addCompanion: { id: 'nurse', role: '간호사', name: '서연', desc: '💉 인벤토리 +1 & 지속적 체력 회복', loyalty: 60, affinity: 70 }, log: "시선을 끈 사이 서연이 탈출해 합류했습니다!" };
+                  }
+                  return { stats: { health: -15, mental: -10 }, log: "감염자들의 어그로가 당신에게 끌려 도망쳐야 했습니다." };
+                }
+              },
+              {
+                text: "간호사가 죽기를 기다렸다가 가방만 챙긴다.",
+                action: () => ({ stats: { mental: -30 }, itemsGained: ['medkit'], log: "잔혹한 선택으로 구급상자를 얻었지만 죄책감에 시달립니다." })
+              },
+              { text: "외면하고 지나친다.", action: () => ({ log: "외면하고 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'recruitment_chef',
+            condition: (state) => state.currentLocation === 'mart' && !state.companions.some(c => c.id === 'chef'),
+            text: "[생존자 조우] 대형 마트 주방 구석에 웅크리고 있던 베테랑 요리사 '홍형'을 마주쳤습니다.",
+            choices: [
+              {
+                text: "함께 살아남지 않겠냐고 제안한다.",
+                action: () => ({
+                  stats: { mental: +15 },
+                  addCompanion: { id: 'chef', role: '요리사', name: '홍형', desc: '👨‍🍳 포만감 소모 25% 완화', loyalty: 75, affinity: 50 },
+                  log: "홍형이 동료로 합류했습니다! (패시브: 허기 감소 완화)"
+                })
+              },
+              {
+                text: "가진 식량을 주며 환심을 산다.",
+                action: (inv) => {
+                  if(inv.includes('ration')) return { itemsLost: ['ration'], addCompanion: { id: 'chef', role: '요리사', name: '홍형', desc: '👨‍🍳 포만감 소모 25% 완화', loyalty: 90, affinity: 80 }, log: "식량을 받은 홍형이 깊은 감동을 받아 높은 충성도로 합류했습니다!" };
+                  return { log: "나눠줄 식량이 없어 그냥 지나쳤습니다." };
+                }
+              },
+              { text: "거절하고 혼자 간다.", action: () => ({ log: "홍형을 두고 나왔습니다." }) }
+            ]
+          },
+          {
+            id: 'recruitment_engineer',
+            condition: (state) => state.currentLocation !== 'airport' && state.counters.totalHours >= 24 && !state.companions.some(c => c.id === 'engineer'),
+            text: "[생존자 조우] 고장 난 발전기 앞에서 도구를 만지작거리던 공학자 '제민'을 만났습니다.",
+            choices: [
+              {
+                text: "기호품(소주/담배)을 건네며 동료로 스카우트한다.",
+                action: (inv) => {
+                  if (inv.includes('soju') || inv.includes('cigarette')) {
+                    const itemToLose = inv.includes('soju') ? 'soju' : 'cigarette';
+                    return {
+                      itemsLost: [itemToLose], stats: { mental: +20 },
+                      addCompanion: { id: 'engineer', role: '공학자', name: '제민', desc: '🔧 위생 감소 속도 30% 완화', loyalty: 70, affinity: 60 },
+                      log: "제민이 동료로 합류했습니다! (패시브: 위생 감소 완화)"
+                    };
+                  }
+                  return { stats: { mental: -5 }, log: "기호품이 없어 그를 설득하지 못했습니다." };
+                }
+              },
+              {
+                text: "발전기를 고치면 보호해주겠다고 제안한다.",
+                action: () => {
+                  if(Math.random() < 0.5) return { addCompanion: { id: 'engineer', role: '공학자', name: '제민', desc: '🔧 위생 감소 속도 30% 완화', loyalty: 50, affinity: 40 }, log: "어쩔 수 없다는 듯 제민이 마지못해 합류했습니다." };
+                  return { log: "제민은 당신을 믿지 못하겠다며 거절했습니다." };
+                }
+              },
+              { text: "지나친다.", action: () => ({ log: "그를 두고 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'companion_betrayal',
+            condition: (state) => state.companions.some(c => c.loyalty <= 35) || (state.companions.length > 0 && (state.stats.hunger <= 35 || state.stats.mental <= 25)),
+            text: "[충성도 균열] 불만에 찬 동료가 배고픔과 공포를 견디지 못하고 배신을 획책하고 있습니다!",
+            choices: [
+              {
+                text: "무기로 위협하여 쫓아낸다.",
+                action: (inv, counters, trait, companions) => {
+                  const betrayer = companions.find(c => c.loyalty <= 35) || companions[0];
+                  const w = inv.find(item => WEAPONS.includes(item));
+                  if (w) {
+                    return { useWeapon: w, removeCompanionId: betrayer.id, stats: { mental: -15 }, log: `무기로 억제하여 소지품을 지켰습니다. [${betrayer.name}]은(는) 떠났습니다.` };
+                  }
+                  const stolenItem = inv.length > 0 ? inv[0] : null;
+                  return { removeCompanionId: betrayer.id, itemsLost: stolenItem ? [stolenItem] : [], stats: { mental: -25 }, log: `무기가 없어 저지하지 못했습니다! [${betrayer.name}]이(가) 소지품을 훔쳐 도망쳤습니다.` };
+                }
+              },
+              {
+                text: "전투식량을 내어주며 다독인다.",
+                action: (inv, counters, trait, companions) => {
+                  const betrayer = companions.find(c => c.loyalty <= 35) || companions[0];
+                  if (inv.includes('ration')) {
+                    return { itemsLost: ['ration'], updateLoyalty: { id: betrayer.id, delta: +30 }, updateAffinity: { id: betrayer.id, delta: +10 }, stats: { mental: +15 }, log: `식량을 건네자 [${betrayer.name}]의 충성도가 크게 상승했습니다!` };
+                  }
+                  return { removeCompanionId: betrayer.id, stats: { mental: -20 }, log: "나눠줄 식량이 없어 동료가 결국 도망치고 말았습니다." };
+                }
+              },
+              {
+                text: "그동안 쌓아온 정에 호소하며 설득한다 (호감도 60 이상 필요).",
+                action: (inv, counters, trait, companions) => {
+                  const betrayer = companions.find(c => c.loyalty <= 35) || companions[0];
+                  if (betrayer.affinity >= 60) {
+                    return { updateLoyalty: { id: betrayer.id, delta: +40 }, updateAffinity: { id: betrayer.id, delta: +15 }, log: `[${betrayer.name}]은(는) 당신의 진심 어린 호소에 마음을 돌렸습니다! (충성도 회복)` };
+                  }
+                  return { removeCompanionId: betrayer.id, stats: { health: -10, mental: -30 }, log: `호감도가 부족하여 설득에 실패했습니다. 오히려 그가 당신을 밀치고 도망쳤습니다.` };
+                }
+              },
+              {
+                text: "배신하기 전에 먼저 기습하여 제압한다.",
+                action: (inv, counters, trait, companions) => {
+                  const betrayer = companions.find(c => c.loyalty <= 35) || companions[0];
+                  return { removeCompanionId: betrayer.id, itemsGained: ['ration'], stats: { mental: -40 }, log: `동료를 선제 공격하여 식량을 빼앗고 쫓아냈습니다. 깊은 죄책감에 시달립니다.` };
+                }
+              }
+            ]
+          },
+          {
+            id: 'find_vehicle_bicycle',
+            condition: (state) => !state.vehicle && (state.travelState ? Math.random() < 0.22 : (state.currentLocation === 'school' || state.currentLocation === 'street') && Math.random() < 0.8),
+            text: "[탈것 발견] 주변에 버려진 아직 탈 만한 자전거가 있습니다.",
+            choices: [
+              {
+                text: "자전거를 획득한다.",
+                action: () => ({ setVehicle: { id: 'bicycle', cap: 100 }, log: "자전거를 확보했습니다! 체력을 소모하지만 이동이 빠릅니다." })
+              },
+              { text: "지나친다.", action: () => ({ log: "자전거를 두고 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'find_vehicle_motorcycle',
+            condition: (state) => !state.vehicle && (state.travelState ? Math.random() < 0.22 : (state.currentLocation === 'street' || state.currentLocation === 'police_station') && Math.random() < 0.8),
+            text: "[탈것 발견] 방치된 오토바이를 발견했습니다. 시동이 걸릴 것 같습니다.",
+            choices: [
+              {
+                text: "오토바이에 탑승한다.",
+                action: () => ({ setVehicle: { id: 'motorcycle', cap: 50 }, log: "오토바이를 확보했습니다! 주행 시 기름이 소모됩니다." })
+              },
+              {
+                text: "기름만 빼낸다.",
+                action: () => ({ itemsGained: ['gas_can'], log: "오토바이에서 [휘발유 캔]을 챙겼습니다." })
+              },
+              { text: "지나친다.", action: () => ({ log: "오토바이를 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'recruitment_vaccine_developer',
+            condition: (state) => state.currentLocation === 'laboratory' && !state.companions.some(c => c.id === 'vaccine_developer'),
+            text: "[생존자 조우] 연구소 구석에서 방호복을 입고 데이터를 백업 중인 백신개발자 '김박사'를 만났습니다.",
+            choices: [
+              {
+                text: "안전을 약속하며 합류를 제안한다.",
+                action: () => ({
+                  stats: { mental: +10 },
+                  addCompanion: { id: 'vaccine_developer', role: '백신개발자', name: '김박사', desc: '🔬 감염 속도 완화 및 백신 제작 지식', loyalty: 60, affinity: 50 },
+                  log: "김박사가 동료로 합류했습니다! (패시브: 백신 관련 특수 이벤트 가능)"
+                })
+              },
+              { text: "그냥 지나친다.", action: () => ({ log: "김박사를 두고 떠났습니다." }) }
+            ]
+          },
+          {
+            id: 'lab_scenario_1',
+            condition: (state) => state.currentLocation === 'laboratory',
+            text: "[장소 시나리오: 질병통제연구소] 굳게 닫힌 연구실 문 뒤로 냉동 보관함과 구급 장비들이 보입니다.",
+            choices: [
+              {
+                text: "무기로 문을 강제로 연다 (부상 위험).",
+                action: (inv) => {
+                  const w = inv.find(item => WEAPONS.includes(item));
+                  if (w) return { useWeapon: w, stats: { health: -15 }, itemsGained: ['medkit', 'wet_wipes'], log: "문을 여는 중 유리에 베였지만, 구급상자와 물티슈를 얻었습니다!" };
+                  return { stats: { health: -20 }, log: "무기 없이 열려다 심하게 다쳤습니다." };
+                }
+              },
+              {
+                text: "휴대용 배터리를 사용해 전자 잠금장치를 푼다.",
+                action: (inv) => {
+                  if (inv.includes('battery_pack')) {
+                    return { itemsLost: ['battery_pack'], itemsGained: ['medkit', 'medkit'], log: "배터리를 전력으로 사용해 문을 열고 다량의 의약품을 챙겼습니다!" };
+                  }
+                  return { log: "휴대용 배터리가 없어 문을 열 수 없습니다." };
+                }
+              },
+              { text: "지나친다.", action: () => ({ log: "연구실을 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'lab_scenario_2',
+            condition: (state) => state.currentLocation === 'laboratory' && !state.inventory.includes('pre_clinical_vaccine') && !state.inventory.includes('completed_vaccine'),
+            text: "[장소 시나리오: 질병통제연구소] 메인 서버실 근처에서 특수 보관함에 담긴 '비임상 백신' 샘플을 발견했습니다!",
+            choices: [
+              {
+                text: "비임상 백신 샘플을 가방에 챙긴다.",
+                action: () => ({ itemsGained: ['pre_clinical_vaccine'], log: "인류의 희망이 될 수도 있는 [비임상 백신]을 획득했습니다!" })
+              },
+              { text: "위험한 생물재해 물질일 수 있으니 무시한다.", action: () => ({ log: "샘플을 건드리지 않고 지나쳤습니다." }) }
+            ]
+          },
+          {
+            id: 'controlled_area_scenario_1',
+            condition: (state) => state.currentLocation === 'controlled_area',
+            text: "[장소 시나리오: 군사 통제구역] 삼엄한 경비가 펼쳐진 안전지대 초소 입구에 다다랐습니다.",
+            choices: [
+              {
+                text: "검문에 순응하고 구호 물자를 배급 받는다.",
+                action: () => ({ itemsGained: ['ration', 'soap'], stats: { mental: +15 }, log: "검문을 통과하고 전투식량과 비누를 지원받았습니다." })
+              },
+              { text: "위압적인 분위기에 겁을 먹고 멀어진다.", action: () => ({ stats: { mental: -5 }, log: "초소를 피해 멀어졌습니다." }) }
+            ]
+          },
+          {
+            id: 'controlled_area_scenario_2',
+            condition: (state) => state.currentLocation === 'controlled_area',
+            text: "[장소 시나리오: 군사 통제구역] 초소 외곽에 방치된 군수품 상자를 발견했습니다.",
+            choices: [
+              {
+                text: "상자를 몰래 열어 수색한다.",
+                action: () => {
+                  if (Math.random() < 0.5) return { itemsGained: ['pistol'], log: "군수품 상자에서 [권총]을 찾아냈습니다!" };
+                  return { stats: { health: -10 }, log: "경비병에게 들켜 폭행당하고 쫓겨났습니다." };
+                }
+              },
+              { text: "규율을 지키기 위해 무시한다.", action: () => ({ log: "상자를 무시하고 안전 구역에 머물렀습니다." }) }
+            ]
+          },
+          {
+            id: 'craft_completed_vaccine',
+            condition: (state) => state.inventory.includes('pre_clinical_vaccine') && state.companions.some(c => c.id === 'vaccine_developer') && state.companions.some(c => c.id === 'military_dog' || c.id === 'stray_cat') && !state.inventory.includes('completed_vaccine'),
+            text: "[백신 완성의 대가] 백신개발자 김박사가 비임상 백신을 완성하려면 생체 실험체가 필요하다고 합니다. 곁에 있는 군견이나 고양이를 희생하면 인류를 구원할 '완성된 백신'을 만들 수 있습니다...",
+            choices: [
+              {
+                text: "눈물을 머금고 반려동물을 희생하여 백신을 완성한다.",
+                action: (inv, counters, trait, companions) => {
+                  const pet = companions.find(c => c.id === 'military_dog' || c.id === 'stray_cat');
+                  return {
+                    itemsLost: ['pre_clinical_vaccine'],
+                    itemsGained: ['completed_vaccine'],
+                    removeCompanionId: pet.id,
+                    stats: { mental: -50 },
+                    log: `반려동물 '${pet.name}'의 희생으로 [완성된 백신]이 제작되었습니다... 엄청난 죄책감에 시달립니다.`
+                  };
+                }
+              },
+              {
+                text: "반려동물은 가족이다. 백신 완성을 단호히 거절한다.",
+                action: (inv, counters, trait, companions) => {
+                  const pet = companions.find(c => c.id === 'military_dog' || c.id === 'stray_cat');
+                  return {
+                    stats: { mental: +20 },
+                    updateLoyalty: { id: pet.id, delta: +50 },
+                    updateAffinity: { id: pet.id, delta: +50 },
+                    log: `백신보다 생명을 택했습니다! '${pet.name}'이(가) 당신의 품에 깊이 파고들며 절대적인 충성을 맹세합니다.`
+                  };
+                }
+              }
+            ]
+          },
+          {
+            id: 'travel_car_drive',
+            condition: (state) => state.travelState && state.vehicle && state.vehicle.id === 'car' && Math.random() < 0.5,
+            text: "[이동 중 시나리오] 도로 중앙에 감염자 무리가 바글거립니다! 자동차 핸들을 강하게 쥐었습니다.",
+            choices: [
+              { text: "🚗 액셀을 밟아 그대로 들이받는다!", action: (inv, counters, trait, companions, vehicle) => {
+                  if (vehicle.cap >= 10) {
+                    return { setVehicle: { ...vehicle, cap: Math.max(0, vehicle.cap - 10) }, log: "시원하게 감염자 무리를 갈아버리며 돌파했습니다!" };
+                  }
+                  return { stats: { health: -20 }, log: "연료 부족으로 차가 멈춰 시동이 꺼졌습니다! 급하게 탈출했습니다." };
+              }},
+              { text: "차를 멈추고 우회로를 찾는다.", action: () => {
+                  return { addTravelTime: 2, log: "골목길로 우회하여 경로를 변경했습니다." };
+              }}
+            ]
+          },
+          {
+            id: 'travel_zombie',
+            condition: (state) => state.travelState && Math.random() < 0.5,
+            text: "[이동 중 시나리오] 거리를 가로지르던 중 득실거리는 감염자 무리가 앞길을 막아섰습니다!",
+            choices: [
+              { text: "무기를 들고 강행 돌파한다.", action: (inv) => {
+                  let dmg = 30;
+                  let logAction = "무기를 휘두르며 감염자들을 뚫고 돌파했습니다.";
+                  if (inv.includes('shotgun')) { dmg = 0; logAction = "[CRITICAL!] 💥 샷건의 굉음과 함께 좀비의 머리가 터져 나갑니다!"; }
+                  else if (inv.includes('pistol')) { dmg = 5; logAction = "[CRITICAL!] 🔫 날카로운 총성과 함께 좀비의 미간에 구멍이 뚫립니다!"; }
+                  else if (inv.includes('machete')) { dmg = 10; logAction = "[CRITICAL!] 🗡️ 마체테가 번뜩이며 좀비의 팔다리가 숭텅 잘려 나갑니다!"; }
+                  else if (inv.includes('baton')) { dmg = 12; logAction = "[CRITICAL!] 🚓 진압봉으로 좀비의 턱을 박살내며 뼈가 부러지는 소리가 울립니다!"; }
+                  else if (inv.includes('bat')) { dmg = 15; logAction = "[CRITICAL!] 🏏 묵직한 파열음과 함께 좀비의 두개골이 산산조각 납니다!"; }
+                  else if (inv.includes('knife')) { dmg = 15; logAction = "[CRITICAL!] 🔪 단검으로 좀비의 급소를 무자비하게 난도질합니다!"; }
+                  const w = inv.find(item => WEAPONS.includes(item));
+                  return { useWeapon: w, stats: { health: -dmg, mental: -5 }, log: logAction };
+              }},
+              { text: "먼 길로 우회로를 찾는다 (시간/허기 소모).", action: () => {
+                  return { stats: { hunger: -20 }, addTravelTime: 2, log: "우회하여 이동했지만 시간이 지체되었습니다." };
+              }},
+              { text: "어둠 속에 숨죽여 무리가 지나가길 기다린다.", action: () => {
+                  return { stats: { mental: -15 }, addTravelTime: 3, log: "불안에 떨며 기다린 끝에 길을 빠져나왔습니다." };
+              }}
+            ]
+          },
+          {
+            id: 'travel_special_zombie',
+            condition: (state) => state.travelState && Math.random() < 0.4,
+            text: "[이동 중 시나리오] 골목 어귀에서 괴이하게 변이된 대형 특수 좀비와 마주쳤습니다!",
+            choices: [
+              { text: "정면으로 맞서 싸운다 (리스크/하이리턴).", action: (inv) => {
+                  const w = inv.find(item => WEAPONS.includes(item));
+                  if (w) return { useWeapon: w, stats: { health: -15 }, itemsGained: ['medkit'], log: "무기를 활용해 변이 감염자를 처치하고 그 곁에서 구급상자를 발견했습니다!" };
+                  return { stats: { health: -40, mental: -20 }, log: "강력한 힘에 압도당해 큰 부상을 입고 도망쳤습니다." };
+              }},
+              { text: "식량을 미끼로 던지고 도망친다.", action: (inv) => {
+                  if(inv.includes('ration')) return { itemsLost: ['ration'], log: "전투식량으로 놈의 시선을 돌리고 안전하게 벗어났습니다." };
+                  return { stats: { health: -30 }, log: "미끼가 없어 도망치다 매섭게 공격당했습니다." };
+              }},
+              { text: "조용히 뒤로 물러나 다른 길을 찾는다.", action: () => {
+                  return { stats: { hunger: -15, mental: -5 }, addTravelTime: 2, log: "변이체의 눈을 피해 멀리 돌아갔습니다." };
+              }}
+            ]
+          },
+          {
+            id: 'travel_supply',
+            condition: (state) => state.travelState && Math.random() < 0.5,
+            text: "[이동 중 시나리오] 버려진 장갑차 옆에서 굳게 닫힌 보급상자를 발견했습니다.",
+            choices: [
+              { text: "힘으로 억지로 연다 (부상 위험).", action: () => {
+                  if(Math.random() < 0.5) return { stats: { health: -10 }, itemsGained: ['ration'], log: "철제 모서리에 손을 다쳤지만 식량을 얻었습니다." };
+                  return { itemsGained: ['medkit', 'ration'], log: "상자를 열어 유용한 물자를 챙겼습니다." };
+              }},
+              { text: "도구를 이용해 틈을 벌린다.", action: (inv) => {
+                  const w = inv.find(item => ['machete', 'knife', 'bat'].includes(item));
+                  if(w) return { useWeapon: w, itemsGained: ['radio', 'ration'], log: "도구를 사용해 안전하게 열어 물자를 챙겼습니다." };
+                  return { log: "적절한 도구가 없어 흠집만 내고 발길을 돌렸습니다." };
+              }},
+              { text: "함정일지 모르니 무시하고 간다.", action: () => {
+                  return { stats: { mental: +5 }, log: "안전을 최우선으로 여겨 발걸음을 재촉했습니다." };
+              }}
+            ]
+          },
+
+          {
+            id: 'handover_vaccine_ending',
+            condition: (state) => state.currentLocation === 'controlled_area' && state.inventory.includes('completed_vaccine'),
+            text: "[인류의 구원] 군사 통제구역의 사령관이 당신이 가진 '완성된 백신'을 보고 경악합니다. '이것만 있으면 세상을 구할 수 있어!'",
+            choices: [
+              {
+                text: "백신을 넘기고 특별 헬기로 탈출한다. (진정한 생존 엔딩)",
+                action: () => {
+                  return { flags: { triggerVaccineEnding: true }, log: "🎉 백신을 전달하여 인류를 구원한 영웅이 되었습니다!" };
+                }
+              }
+            ]
+          }
+        ];
+
+        function SurvivalGame() {
+          const [gameState, setGameState] = useState('opening'); 
+          const [player, setPlayer] = useState({ name: "", gender: "남성" });
+          const [trait, setTrait] = useState(null);
+          const [inventory, setInventory] = useState([]);
+          const [weaponDurability, setWeaponDurability] = useState({});
+          const [companions, setCompanions] = useState([]);
+          const [currentLocation, setCurrentLocation] = useState('street');
+          const [stats, setStats] = useState({ health: 100, hunger: 100, mental: 100, hygiene: 100 });
+          const [counters, setCounters] = useState({ totalHours: 8, zombiesKilled: 0, hasShelter: false }); 
+          const [flags, setFlags] = useState({});
+          const [isPlaying, setIsPlaying] = useState(false);
+          const [gameSpeed, setGameSpeed] = useState(1);
+          const [logs, setLogs] = useState([]); 
+          const [activeEvent, setActiveEvent] = useState(null);
+          const [recentEventIds, setRecentEventIds] = useState([]);
+          const [reservedLocation, setReservedLocation] = useState(null);
+          const [destinationPopupOpen, setDestinationPopupOpen] = useState(false);
+          const [itemUseModal, setItemUseModal] = useState(null);
+          const [statusToast, setStatusToast] = useState('');
+          const [travelState, setTravelState] = useState(null);
+          const [vehicle, setVehicle] = useState(null);
+          const [isBgmPlaying, setIsBgmPlaying] = useState(true);
+
+          const [rescueInfo, setRescueInfo] = useState({ targetDay: 3, hour: 12, locationId: 'broadcasting' });
+
+          const [deathCause, setDeathCause] = useState({ title: '', desc: '' });
+
+          const [discardModal, setDiscardModal] = useState({ open: false, pendingItems: [] });
+          
+          const logEndRef = useRef(null);
+          const logContainerRef = useRef(null);
+          
+          const maxInventorySlots = BASE_INVENTORY_SIZE;
+
+          useEffect(() => {
+            const audio = document.getElementById('bgmAudio');
+            if (audio) {
+              if (gameState === 'playing' && isBgmPlaying) {
+                audio.play().catch(e => console.log("BGM 재생 실패:", e));
+              } else if (gameState === 'gameover' || gameState.includes('ending') || gameState.includes('victory') || !isBgmPlaying) {
+                audio.pause();
+              }
+            }
+          }, [gameState, isBgmPlaying]);
+
+          const getCurrentLocationName = (locationId) => {
+            const location = LOCATIONS.find((loc) => loc.id === locationId)
+              || RESPAWN_LOCATIONS.find((loc) => loc.id === locationId);
+            return location ? location.name : '위치 확인 중';
+          };
+
+          const formatTime = (totalH) => {
+            const day = Math.floor(totalH / 24) + 1;
+            const hour = totalH % 24;
+            return `D-${day} ${hour.toString().padStart(2, '0')}:00`;
+          };
+
+          const getRandomDeathMessage = (category) => {
+            const msgs = DEATH_MESSAGES[category] || DEATH_MESSAGES.unknown;
+            return msgs[Math.floor(Math.random() * msgs.length)];
+          };
+
+          const handleDeath = (category, causeTitle) => {
+            const desc = getRandomDeathMessage(category);
+            setDeathCause({ title: causeTitle, desc });
+            setIsPlaying(false);
+            setTimeout(() => setGameState('gameover'), 800);
+          };
+
+          const generateNextRescue = (currentTotalHours) => {
+            const currentDay = Math.floor(currentTotalHours / 24) + 1;
+            const nextDay = Math.ceil(currentDay / 3) * 3 || 3;
+            const targetDay = currentDay >= nextDay ? currentDay + 3 : nextDay;
+            const hour = Math.floor(Math.random() * 15) + 8; 
+            const randomLoc = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)].id;
+            return { targetDay, hour, locationId: randomLoc };
+          };
+
+          const startGame = () => {
+            const spawnPoint = RESPAWN_LOCATIONS[Math.floor(Math.random() * RESPAWN_LOCATIONS.length)];
+            const assignedTrait = TRAITS_POOL[Math.floor(Math.random() * TRAITS_POOL.length)];
+            const randomItem = START_ITEMS_POOL[Math.floor(Math.random() * START_ITEMS_POOL.length)];
+            const maxHealth = assignedTrait.id === 'strong' ? 120 : 100;
+
+            const initialDurability = {};
+            if (WEAPONS.includes(randomItem)) {
+              initialDurability[randomItem] = 2;
+            }
+
+            const initialRescue = generateNextRescue(8);
+            setRescueInfo(initialRescue);
+
+            setTrait(assignedTrait);
+            setCounters({ totalHours: 8, zombiesKilled: 0, hasShelter: spawnPoint.hasShelter, locationHours: 0 });
+            setStats({ health: maxHealth, hunger: 100, mental: 100, hygiene: 100 });
+            setFlags({});
+            setCompanions([]);
+            setInventory([randomItem]);
+            setWeaponDurability(initialDurability);
+            setRecentEventIds([]);
+            setReservedLocation(null);
+            setTravelState(null);
+            setVehicle(null);
+            setDeathCause({ title: '', desc: '' });
+            setCurrentLocation(spawnPoint.id);
+
+            setLogs([
+              { timeStr: formatTime(8), text: `[성별: ${player.gender}] 특성 [${assignedTrait.name}]을(를) 가지고 생존을 시작합니다.`, type: 'event' },
+              { timeStr: formatTime(8), text: spawnPoint.log, type: 'normal' }
+            ]);
+            setGameState('playing');
+            setIsPlaying(true);
+          };
+
+          const checkSynergies = () => {
+            const cIds = companions.map(c => c.id);
+            return {
+              tacticalUnit: cIds.includes('police') && cIds.includes('soldier'), 
+              medicalTeam: cIds.includes('nurse') && cIds.includes('pharmacist'), 
+              survivalBase: cIds.includes('chef') && cIds.includes('engineer'), 
+              wildBeasts: cIds.includes('military_dog') && cIds.includes('stray_cat') 
+            };
+          };
+
+          const applyCompanionAndTraitEffects = (currentStats) => {
+            let healthGain = 0;
+            let hungerExtraLoss = companions.filter(c => c.role !== '길고양이' && c.role !== '군견').length * 0.8; 
+            let mentalGain = 0;
+
+            const synergies = checkSynergies();
+
+            if (companions.some(c => c.id === 'nurse')) healthGain += (synergies.medicalTeam ? 7 : 4);
+            if (companions.some(c => c.id === 'stray_cat')) mentalGain += (synergies.wildBeasts ? 5 : 3);
+            if (trait?.id === 'clean_freak' && currentStats.hygiene >= 80) mentalGain += 3;
+            
+            const highAffinityCount = companions.filter(c => c.affinity >= 80).length;
+            mentalGain += (highAffinityCount * 2);
+
+            const maxHealth = trait?.id === 'strong' ? 120 : 100;
+            return {
+              ...currentStats,
+              health: Math.min(maxHealth, currentStats.health + healthGain),
+              hunger: Math.max(0, currentStats.hunger - hungerExtraLoss),
+              mental: Math.min(100, currentStats.mental + mentalGain)
+            };
+          };
+
+          useEffect(() => {
+            if (gameState !== 'playing') return;
+
+            const maxHealth = trait?.id === 'strong' ? 120 : 100;
+
+            if (stats.health < maxHealth * 0.10 && inventory.includes('medkit')) {
+              handleCraftingUse('heal');
+              setLogs(prev => [...prev, { timeStr: formatTime(counters.totalHours), text: "⚠️ [자동 사용] 건강 위험(10% 미만)! [구급상자]를 자동으로 사용했습니다.", type: 'event' }].slice(-MAX_LOGS));
+            }
+
+            if (stats.hunger < 10 && inventory.includes('ration')) {
+              handleCraftingUse('eat_ration');
+              setLogs(prev => [...prev, { timeStr: formatTime(counters.totalHours), text: "⚠️ [자동 사용] 허기 위험(10% 미만)! [전투식량]을 자동으로 섭취했습니다.", type: 'event' }].slice(-MAX_LOGS));
+            }
+
+            if (stats.mental < 10) {
+              if (inventory.includes('chocolate')) {
+                handleCraftingUse('use_chocolate');
+                setLogs(prev => [...prev, { timeStr: formatTime(counters.totalHours), text: "⚠️ [자동 사용] 정신력 위험(10% 미만)! [초콜릿]을 자동으로 먹었습니다.", type: 'event' }].slice(-MAX_LOGS));
+              } else if (inventory.includes('coffee')) {
+                handleCraftingUse('use_coffee');
+                setLogs(prev => [...prev, { timeStr: formatTime(counters.totalHours), text: "⚠️ [자동 사용] 정신력 위험(10% 미만)! [캔커피]를 자동으로 마셨습니다.", type: 'event' }].slice(-MAX_LOGS));
+              } else if (inventory.includes('lighter') && inventory.includes('cigarette')) {
+                handleCraftingUse('smoke');
+                setLogs(prev => [...prev, { timeStr: formatTime(counters.totalHours), text: "⚠️ [자동 사용] 정신력 위험(10% 미만)! [담배]를 자동으로 피웠습니다.", type: 'event' }].slice(-MAX_LOGS));
+              }
+            }
+
+            if (stats.hygiene < 10) {
+              if (inventory.includes('soap')) {
+                handleCraftingUse('use_soap');
+                setLogs(prev => [...prev, { timeStr: formatTime(counters.totalHours), text: "⚠️ [자동 사용] 위생 위험(10% 미만)! [비누]를 자동으로 사용했습니다.", type: 'event' }].slice(-MAX_LOGS));
+              } else if (inventory.includes('wet_wipes')) {
+                handleCraftingUse('use_wipes');
+                setLogs(prev => [...prev, { timeStr: formatTime(counters.totalHours), text: "⚠️ [자동 사용] 위생 위험(10% 미만)! [물티슈]를 자동으로 사용했습니다.", type: 'event' }].slice(-MAX_LOGS));
+              }
+            }
+
+            if (vehicle && VEHICLE_TYPES[vehicle.id]?.type !== 'stamina' && vehicle.cap < 10) {
+              if ((vehicle.id === 'motorcycle' || vehicle.id === 'car') && inventory.includes('gas_can')) {
+                handleCraftingUse('refuel_vehicle');
+                setLogs(prev => [...prev, { timeStr: formatTime(counters.totalHours), text: "⚠️ [자동 사용] 차량 연료 부족(10% 미만)! [휘발유 캔]을 자동으로 주유했습니다.", type: 'event' }].slice(-MAX_LOGS));
+              } else if (vehicle.id === 'kickboard' && inventory.includes('battery_pack')) {
+                handleCraftingUse('charge_kickboard');
+                setLogs(prev => [...prev, { timeStr: formatTime(counters.totalHours), text: "⚠️ [자동 사용] 킥보드 배터리 부족(10% 미만)! [휴대용 배터리]를 자동으로 충전했습니다.", type: 'event' }].slice(-MAX_LOGS));
+              }
+            }
+          }, [stats, vehicle, inventory, gameState, counters.totalHours, trait]);
+
+          // 자전거는 체력 20 이하에서 이용할 수 없다. 이동 중이라면 남은 구간을 도보로 전환한다.
+          useEffect(() => {
+            if (!vehicle || vehicle.id !== 'bicycle' || stats.health > 20) return;
+            setVehicle(null);
+            setTravelState(prev => {
+              if (!prev) return null;
+              const remainingDistance = Math.max(0, Number.isFinite(prev.distanceRemaining) ? prev.distanceRemaining : 0);
+              return {
+                ...prev,
+                hoursLeft: Math.max(1, Math.ceil(1 + remainingDistance * 2)),
+                vehicleId: null,
+                vehicleCostTotal: 0,
+                vehicleTravelHours: 0,
+                speedMult: 1,
+                vehicleNote: `${prev.vehicleNote || ''} (체력 20 이하: 자전거 이용 불가, 도보 전환)`
+              };
+            });
+            setLogs(l => [...l, { timeStr: formatTime(counters.totalHours), text: '⚠️ 체력이 20 이하로 떨어져 자전거를 더 이상 이용할 수 없습니다. 남은 이동은 도보로 전환됩니다.', type: 'event' }].slice(-MAX_LOGS));
+          }, [stats.health, vehicle, counters.totalHours]);
+
+          useEffect(() => {
+            if (!isPlaying || gameState !== 'playing' || gameSpeed === 0 || activeEvent || discardModal.open) return;
+
+            const intervalTime = 2500 / gameSpeed;
+
+            const timer = setInterval(() => {
+              let baseHoursPassed = Math.floor(Math.random() * 2) + 1;
+              let hoursPassed = baseHoursPassed;
+              
+              if (travelState && travelState.hoursLeft < hoursPassed) {
+                  hoursPassed = travelState.hoursLeft;
+              }
+
+              const newHours = counters.totalHours + hoursPassed;
+              const daysSurvived = Math.floor(newHours / 24);
+              const curDay = Math.floor(newHours / 24) + 1;
+              const curHour = newHours % 24;
+
+              let currentRescue = rescueInfo;
+              const rescueTotalHours = (currentRescue.targetDay - 1) * 24 + currentRescue.hour;
+              
+              if (counters.totalHours <= rescueTotalHours && newHours >= rescueTotalHours) {
+                  if (currentLocation === currentRescue.locationId) {
+                      const targetLocName = LOCATIONS.find(l => l.id === currentRescue.locationId)?.name;
+                      setActiveEvent({
+                        id: 'rescue_ending_event',
+                        text: `🚁 [구조대 도착!] 굉음을 내며 [${targetLocName}] 상공에 군용 구조 헬리콥터가 착륙합니다! 무전기로 정보를 파악하고 제시간에 도착한 당신을 향해 구호 대원들이 신호를 보냅니다!`,
+                        choices: [
+                          {
+                            text: "🚁 구조 헬기에 탑승하여 아포칼립스를 탈출한다! (생존 성공)",
+                            action: () => {
+                              setIsPlaying(false);
+                              setTimeout(() => setGameState('victory'), 500);
+                              return { log: "🎉 축하합니다! 무사히 구조대의 헬기에 탑승하여 죽음의 도시를 탈출했습니다!" };
+                            }
+                          }
+                        ]
+                      });
+                      setIsPlaying(false);
+                      return;
+                  }
+              }
+
+              if (newHours > rescueTotalHours) {
+                  currentRescue = generateNextRescue(newHours);
+                  setRescueInfo(currentRescue);
+              }
+
+              const difficultyMultiplier = 1 + (daysSurvived * 0.08);
+
+              const synergies = checkSynergies();
+
+              let chefMultiplier = companions.some(c => c.id === 'chef') ? 0.75 : 1.0;
+              if (synergies.survivalBase) chefMultiplier = 0.50; 
+
+              const isPharmacistActive = companions.some(c => c.id === 'pharmacist');
+              const baseHealthDecayRate = (stats.hygiene < 20 && !isPharmacistActive && !synergies.medicalTeam ? 4 : (counters.hasShelter ? 1 : 2));
+              
+              let engineerHygieneMod = companions.some(c => c.id === 'engineer') ? 0.7 : 1.0;
+              if (synergies.survivalBase) engineerHygieneMod = 0.0; 
+
+              const healthDecay = baseHealthDecayRate * difficultyMultiplier * 0.8;
+              const hungerDecay = 3 * difficultyMultiplier * chefMultiplier * 0.8;
+              const mentalDecayRate = trait?.id === 'calm' ? 0.5 : 1;
+              const mentalDecay = ((counters.hasShelter ? 1 : 3) * mentalDecayRate) * difficultyMultiplier;
+              const hygieneDecay = (counters.hasShelter ? 2 : 4) * difficultyMultiplier * engineerHygieneMod;
+
+              let nextStats = {
+                health: Math.max(0, stats.health - healthDecay),
+                hunger: Math.max(0, stats.hunger - hungerDecay),
+                mental: Math.max(0, stats.mental - mentalDecay),
+                hygiene: Math.max(0, stats.hygiene - hygieneDecay)
+              };
+
+              if (nextStats.hunger < 30) nextStats.health = Math.max(0, nextStats.health - 2 * difficultyMultiplier * 0.8);
+              if (nextStats.hygiene < 30 && !isPharmacistActive && !synergies.medicalTeam) nextStats.mental = Math.max(0, nextStats.mental - 2 * difficultyMultiplier);
+              if (nextStats.mental < 30) nextStats.hunger = Math.max(0, nextStats.hunger - 1 * difficultyMultiplier * 0.8);
+              if (nextStats.hunger >= 80 && nextStats.hygiene >= 80) nextStats.mental = Math.min(100, nextStats.mental + 1);
+              
+              nextStats = applyCompanionAndTraitEffects(nextStats);
+
+              setCompanions(prevComps => prevComps.map(c => {
+                let loyaltyLoss = 1;
+                let affinityLoss = 0;
+                if (nextStats.hunger <= 30) { loyaltyLoss += 2; affinityLoss += 1; }
+                if (nextStats.hygiene <= 20) loyaltyLoss += 1;
+                return { 
+                  ...c, 
+                  loyalty: Math.max(0, c.loyalty - loyaltyLoss),
+                  affinity: Math.max(0, c.affinity - affinityLoss)
+                };
+              }));
+
+              if (nextStats.health <= 0) {
+                setStats(nextStats);
+                handleDeath('health', '체력 고갈 : 치명적인 상처와 과다출혈로 사망');
+                return;
+              }
+              if (nextStats.hunger <= 0) {
+                setStats(nextStats);
+                handleDeath('hunger', '포만감 부족 : 식량을 섭취하지 못하여 아사');
+                return;
+              }
+              if (nextStats.mental <= 0) {
+                setStats(nextStats);
+                handleDeath('mental', '정신력 고갈 : 살고자 하는 의지를 상실하고 삶을 포기');
+                return;
+              }
+
+              const stateForCondition = {
+                locationHours: counters.locationHours || 0,
+                player, trait, stats: nextStats, counters: { ...counters, totalHours: newHours },
+                flags, inventory, companions, currentLocation, vehicle, travelState
+              };
+
+              let validEvents = EVENTS.filter(e => e.condition(stateForCondition) && !recentEventIds.includes(e.id));
+
+              // 같은 장소에 오래 머물수록 수색 가능한 물자가 줄어들어 아이템 획득 이벤트가 덜 발생한다.
+              const stayedHours = counters.locationHours || 0;
+              if (!travelState && currentLocation !== 'controlled_area' && stayedHours >= 24) {
+                const lootEventIds = new Set([
+                  'airport_scenario_1', 'airport_scenario_2', 'airport_scenario_3',
+                  'find_smoke_items', 'police_armory', 'police_evidence_room',
+                  'street_broken_atm', 'street_barricade', 'gas_station_scavenge',
+                  'gas_station_tanker', 'gas_station_convenience', 'mart_scavenge',
+                  'mart_warehouse_loot', 'mart_pharmacy_scavenge', 'hospital_icu',
+                  'hospital_morgue', 'military_armory', 'military_bunker',
+                  'subway_control_room', 'subway_vending_machine', 'highway_tour_bus',
+                  'highway_cargo_truck', 'school_cafeteria', 'school_infirmary',
+                  'broadcasting_studio', 'broadcasting_canteen', 'port_container',
+                  'port_lighthouse', 'find_vehicle_kickboard', 'find_vehicle_car',
+                  'find_vehicle_bicycle', 'find_vehicle_motorcycle', 'abandoned_backpack'
+                ]);
+                const lootChance = stayedHours >= 48 ? 0.8 : 0.6;
+                validEvents = validEvents.filter(e => !lootEventIds.has(e.id) || Math.random() >= lootChance);
+              }
+              
+              const spawnChance = Math.min(0.95, 0.65 + (daysSurvived * 0.05));
+              const triggerRandom = Math.random() < spawnChance;
+
+              let newHoursLeft = travelState ? travelState.hoursLeft - hoursPassed : 0;
+
+              // 이동 중에는 현재 장소 체류시간을 증가시키지 않고, 남은 거리 기준으로 게이지를 소모한다.
+              let updatedTravelState = travelState;
+              if (travelState) {
+                const hoursBefore = Math.max(1, travelState.hoursLeft);
+                const distanceBefore = Math.max(0, Number.isFinite(travelState.distanceRemaining) ? travelState.distanceRemaining : (travelState.totalDistance || 0));
+                const distanceCovered = newHoursLeft <= 0
+                  ? distanceBefore
+                  : Math.min(distanceBefore, distanceBefore * Math.min(1, hoursPassed / hoursBefore));
+                const distanceRemaining = Math.max(0, distanceBefore - distanceCovered);
+                updatedTravelState = { ...travelState, distanceRemaining };
+
+                if (travelState.vehicleId && vehicle && vehicle.id === travelState.vehicleId) {
+                  const vehicleData = VEHICLE_TYPES[travelState.vehicleId];
+                  const gaugeCost = vehicleData && vehicleData.type !== 'stamina'
+                    ? distanceCovered * vehicleData.costPerDist
+                    : 0;
+                  const nextCap = Math.max(0, vehicle.cap - gaugeCost);
+                  if (vehicleData && vehicleData.type !== 'stamina' && nextCap <= 0) {
+                    setVehicle(null);
+                    if (newHoursLeft > 0) {
+                      // 연료/배터리가 바닥나면 남은 구간은 도보 속도로 다시 계산한다.
+                      newHoursLeft = Math.max(1, Math.ceil(1 + distanceRemaining * 2));
+                    }
+                    updatedTravelState = {
+                      ...updatedTravelState,
+                      vehicleId: null,
+                      vehicleCostTotal: 0,
+                      vehicleTravelHours: 0,
+                      speedMult: 1
+                    };
+                    setLogs(l => [...l, { timeStr: formatTime(newHours), text: `⚠️ ${vehicleData.name}의 게이지가 모두 소모되어 이동수단을 잃었습니다. 남은 구간은 도보로 이동합니다.`, type: 'event' }].slice(-MAX_LOGS));
+                  } else if (vehicleData && vehicleData.type !== 'stamina') {
+                    setVehicle(v => v && v.id === travelState.vehicleId ? { ...v, cap: nextCap } : v);
+                  }
+                }
+              }
+
+              let eventTriggered = false;
+              let chosenEvent = null;
+              if (validEvents.length > 0 && triggerRandom) {
+                const availableSpecialEnding = validEvents.find(e => e.id === 'ending_betrayal' || e.id === 'ending_mutant' || e.id === 'ending_chip_protocol');
+                if (availableSpecialEnding) {
+                  chosenEvent = availableSpecialEnding;
+                } else {
+                  // 히든 칩 시나리오는 일반 수색 이벤트보다 먼저 보여줘 발견 기회를 보장한다.
+                  const hiddenLabEvent = validEvents.find(e => e.id === 'laboratory_blackbox_signal' || e.id === 'laboratory_chip_recovery');
+                  if (hiddenLabEvent) chosenEvent = hiddenLabEvent;
+                }
+                const attackIds = new Set(['zombie_horde_attack', 'special_zombie_ambush']);
+                const attackEvents = validEvents.filter(e => attackIds.has(e.id));
+                const regularEvents = validEvents.filter(e => !attackIds.has(e.id));
+                const stayDays = travelState ? 0 : Math.floor(Math.max(0, counters.locationHours || 0) / 24);
+                // 공격 확률은 이벤트 목록의 개수와 분리해 한 번만 판정한다.
+                const attackChance = Math.min(0.65, 0.08 + daysSurvived * 0.025 + stayDays * 0.12);
+                if (!chosenEvent && attackEvents.length > 0 && Math.random() < attackChance) {
+                  chosenEvent = attackEvents[Math.floor(Math.random() * attackEvents.length)];
+                } else if (!chosenEvent && regularEvents.length > 0) {
+                  const vehicleEvents = travelState ? regularEvents.filter(e => e.id.startsWith('find_vehicle_')) : [];
+                  const eventPool = vehicleEvents.length > 0 ? vehicleEvents : regularEvents;
+                  // 발표용 밸런스 조정: 약사·경찰관·요리사 조우 이벤트의 선택 가중치를 소폭 높인다.
+                  // 이벤트 발동 빈도와 간호사 등장 조건 등 다른 로직은 그대로 유지한다.
+                  const boostedCompanionIds = new Set(['recruitment_pharmacist', 'recruitment_police', 'recruitment_chef']);
+                  const weightedPool = eventPool.flatMap(e => {
+                    const weight = boostedCompanionIds.has(e.id) ? 3 : 1;
+                    return Array(weight).fill(e);
+                  });
+                  chosenEvent = weightedPool[Math.floor(Math.random() * weightedPool.length)];
+                }
+              }
+              if (chosenEvent) {
+                setRecentEventIds(prev => [...prev.slice(-4), chosenEvent.id]);
+                setStats(nextStats);
+                
+                if (travelState) {
+                  if (newHoursLeft <= 0) {
+                      setTravelState(null);
+                      setCurrentLocation(travelState.targetLoc);
+                      setCounters(c => ({ ...c, totalHours: newHours, locationHours: 0 }));
+                      setLogs(l => [...l, { timeStr: formatTime(newHours), text: `[목적지 도착] ${travelState.destName}에 도착했습니다.`, type: 'event' }].slice(-MAX_LOGS));
+                  } else {
+                      setTravelState({ ...updatedTravelState, hoursLeft: newHoursLeft });
+                      setCounters(c => ({ ...c, totalHours: newHours, locationHours: 0 }));
+                  }
+                } else {
+                  setCounters(c => ({ ...c, totalHours: newHours, locationHours: (c.locationHours || 0) + hoursPassed }));
+                }
+
+                setActiveEvent(chosenEvent);
+                setIsPlaying(false);
+                eventTriggered = true;
+              }
+
+              if (!eventTriggered) {
+                if (travelState) {
+                  if (newHoursLeft <= 0) {
+                    setCurrentLocation(travelState.targetLoc);
+                    setTravelState(null);
+                    setCounters(c => ({ ...c, totalHours: newHours, locationHours: 0 }));
+                    setLogs(l => [...l, { timeStr: formatTime(newHours), text: `[목적지 도착] ${travelState.destName}에 도착했습니다.`, type: 'event' }].slice(-MAX_LOGS));
+                  } else {
+                    setTravelState({ ...updatedTravelState, hoursLeft: newHoursLeft });
+                    setCounters(c => ({ ...c, totalHours: newHours, locationHours: 0 }));
+                    setLogs(l => [...l, { timeStr: formatTime(newHours), text: `[이동 중] ${travelState.destName}(으)로 이동하고 있습니다... (남은 시간: ${newHoursLeft}시간, 진행: ${hoursPassed}시간 소요)`, type: 'normal' }].slice(-MAX_LOGS));
+                  }
+                } else {
+                  const logsArray = counters.hasShelter ? NORMAL_LOGS.sheltered : NORMAL_LOGS.unsheltered;
+                  let randomLog = logsArray[Math.floor(Math.random() * logsArray.length)];
+                  
+                  if (inventory.includes('radio')) {
+                    const targetLocName = LOCATIONS.find(l => l.id === currentRescue.locationId)?.name;
+                    randomLog += ` 📻 [무전기 수신] D-${currentRescue.targetDay} ${currentRescue.hour.toString().padStart(2, '0')}:00에 [${targetLocName}] 구역으로 구조대가 도착합니다! (도착 시간에 맞춰 해당 장소에 있어야 구조될 수 있습니다!)`;
+                  }
+
+                  if (!counters.hasShelter && randomLog.includes("쓰레기통을 뒤집니다")) {
+                    if (Math.random() < 0.08) { 
+                      const trashPool = ['wet_wipes', 'soap', 'chocolate', 'nutrition_bar', 'battery_pack', 'cigarette', 'lighter'];
+                      const foundItem = trashPool[Math.floor(Math.random() * trashPool.length)];
+                      const foundItemName = getItemVisual(foundItem).name;
+                      randomLog = `쓰레기통을 뒤지던 중 유용한 [${foundItemName}]을(를) 발견하여 챙겼습니다!`;
+                      
+                      if (inventory.length < maxInventorySlots) {
+                        setInventory(inv => {
+                          if (WEAPONS.includes(foundItem)) {
+                            setWeaponDurability(d => ({ ...d, [foundItem]: 2 }));
+                          }
+                          return [...inv, foundItem];
+                        });
+                      } else {
+                        setIsPlaying(false);
+                        setDiscardModal({ open: true, pendingItems: [foundItem] });
+                      }
+                    }
+                  }
+                  const hoursStayed = (counters.locationHours || 0) + hoursPassed;
+                  if (currentLocation !== 'controlled_area' && hoursStayed >= 72) {
+                    nextStats.hunger = Math.max(0, nextStats.hunger - 5);
+                    nextStats.health = Math.max(0, nextStats.health - 3);
+                    nextStats.mental = Math.max(0, nextStats.mental - 2);
+                    if (Math.random() < Math.min(0.65, 0.12 + (hoursStayed - 72) * 0.01)) {
+                      nextStats.health = Math.max(0, nextStats.health - 8);
+                      randomLog = `⚠️ [호드 습격] ${Math.floor(hoursStayed)}시간째 정체 중. 보급품은 바닥나고 좀비의 습격이 잦아집니다. 건강 -8`;
+                    } else {
+                      randomLog = `⚠️ [고립 위험] ${Math.floor(hoursStayed)}시간째 체류 중. 물자가 고갈되고 허기·건강·정신력이 악화됩니다.`;
+                    }
+                  }
+                  setCounters(c => ({ ...c, totalHours: newHours, locationHours: (c.locationHours || 0) + hoursPassed }));
+                  setLogs(l => [...l, { timeStr: formatTime(newHours), text: randomLog, type: 'normal' }].slice(-MAX_LOGS));
+                }
+                setStats(nextStats);
+              }
+
+            }, intervalTime);
+
+            return () => clearInterval(timer);
+          }, [isPlaying, gameState, gameSpeed, player, trait, stats, counters, flags, inventory, companions, currentLocation, recentEventIds, activeEvent, vehicle, discardModal, weaponDurability, rescueInfo]);
+
+          useEffect(() => {
+            if (logContainerRef.current) logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+          }, [logs, activeEvent]);
+
+          const handleChoice = (choice) => {
+            const result = choice.action(inventory, counters, trait, companions, vehicle, currentLocation);
+            const maxHealth = trait?.id === 'strong' ? 120 : 100;
+            
+            let logStr = result.log || "";
+
+            let currentInv = [...inventory];
+            let currentDurability = { ...weaponDurability };
+
+            if (result.useWeapon) {
+              let currentDur = currentDurability[result.useWeapon] !== undefined ? currentDurability[result.useWeapon] : 2;
+              currentDur -= 1;
+
+              if (currentDur <= 0) {
+                const idx = currentInv.indexOf(result.useWeapon);
+                if (idx > -1) {
+                  currentInv.splice(idx, 1);
+                }
+                delete currentDurability[result.useWeapon];
+                const wName = getItemVisual(result.useWeapon).name;
+                logStr += `\n💥 무기 [${wName}]의 내구도가 모두 소진되어 내구도 한계로 파괴되었습니다!`;
+              } else {
+                currentDurability[result.useWeapon] = currentDur;
+                const wName = getItemVisual(result.useWeapon).name;
+                logStr += `\n⚔️ 무기 [${wName}] 사용! (남은 내구도: ${currentDur}/2)`;
+              }
+            }
+
+            if (result.setVehicle !== undefined) {
+              const previousSpeedMult = travelState?.speedMult || (vehicle ? (VEHICLE_TYPES[vehicle.id]?.speedMult || 1) : 1);
+              const nextVehicleData = result.setVehicle ? VEHICLE_TYPES[result.setVehicle.id] : null;
+              const nextSpeedMult = nextVehicleData?.speedMult || 1;
+              setVehicle(result.setVehicle);
+
+              // 이동 중 새 이동수단을 얻으면 남은 시간·거리·게이지 소모를 모두 연결한다.
+              if (travelState && result.setVehicle && nextVehicleData && nextSpeedMult < previousSpeedMult) {
+                setTravelState(prev => {
+                  if (!prev) return null;
+                  const adjustedHours = Math.max(1, Math.round(prev.hoursLeft * nextSpeedMult / previousSpeedMult));
+                  const remainingDistance = Math.max(0, Number.isFinite(prev.distanceRemaining) ? prev.distanceRemaining : 0);
+                  const usesGauge = nextVehicleData.type !== 'stamina';
+                  return {
+                    ...prev,
+                    hoursLeft: adjustedHours,
+                    vehicleId: usesGauge ? result.setVehicle.id : null,
+                    vehicleCostTotal: usesGauge ? remainingDistance * nextVehicleData.costPerDist : 0,
+                    vehicleTravelHours: usesGauge ? adjustedHours : 0,
+                    speedMult: nextSpeedMult
+                  };
+                });
+              }
+            }
+            if (result.addTravelTime) setTravelState(prev => prev ? { ...prev, hoursLeft: prev.hoursLeft + result.addTravelTime } : null);
+
+            const synergies = checkSynergies();
+
+            setStats(prev => {
+              let healthDelta = result.stats?.health || 0;
+              
+              if (healthDelta < 0) {
+                if (synergies.tacticalUnit) {
+                  healthDelta = Math.round(healthDelta * 0.25); 
+                  logStr = `🛡️ [시너지: 치안유지조] 지헌과 박상사의 철통 호흡으로 피해를 75%나 방어했습니다!\n` + logStr;
+                } else if (companions.some(c => c.id === 'soldier')) {
+                  healthDelta = Math.round(healthDelta * 0.7); 
+                } else if (companions.some(c => c.id === 'police')) {
+                  healthDelta = Math.round(healthDelta * 0.65); 
+                  logStr = `👮 [경찰관 '지헌'] 지헌이 피해를 차단했습니다!\n` + logStr;
+                }
+
+                if (companions.some(c => c.id === 'military_dog')) {
+                  healthDelta = Math.round(healthDelta * 0.8);
+                  logStr = `🐕 [군견 '제로'] 군견이 경계하며 위협을 완화시켰습니다!\n` + logStr;
+                }
+
+                if (healthDelta < -15 && companions.some(c => c.affinity >= 80)) {
+                  if(Math.random() < 0.48) {
+                    healthDelta = Math.round(healthDelta * 0.5);
+                    logStr = `💖 [협동] 호감도 높은 동료가 위험을 함께 막아 피해를 줄였습니다!\n` + logStr;
+                  }
+                }
+              }
+
+              const newStats = {
+                health: Math.min(maxHealth, Math.max(0, prev.health + healthDelta)),
+                hunger: Math.min(100, Math.max(0, prev.hunger + (result.stats?.hunger || 0))),
+                mental: Math.min(100, Math.max(0, prev.mental + (result.stats?.mental || 0))),
+                hygiene: Math.min(100, Math.max(0, prev.hygiene + (result.stats?.hygiene || 0)))
+              };
+
+              if (newStats.health <= 0) handleDeath('health', '체력 고갈 : 치명적인 상처와 과다출혈로 사망');
+              else if (newStats.hunger <= 0) handleDeath('hunger', '포만감 부족 : 식량을 섭취하지 못하여 아사');
+              else if (newStats.mental <= 0) handleDeath('mental', '정신력 고갈 : 살고자 하는 의지를 상실하고 삶을 포기');
+
+              return newStats;
+            });
+
+            if (result.flags && result.flags.triggerVaccineEnding) {
+              setIsPlaying(false);
+              setTimeout(() => setGameState('victory_vaccine'), 500);
+              delete result.flags.triggerVaccineEnding;
+            }
+            if (result.flags && result.flags.triggerBetrayalEnding) {
+              setIsPlaying(false);
+              setTimeout(() => setGameState('ending_betrayal'), 500);
+              delete result.flags.triggerBetrayalEnding;
+            }
+            if (result.flags && result.flags.triggerMutantEnding) {
+              setIsPlaying(false);
+              setTimeout(() => setGameState('ending_mutant'), 500);
+              delete result.flags.triggerMutantEnding;
+            }
+            if (result.flags && result.flags.triggerPlaneEnding) {
+              setIsPlaying(false);
+              setTimeout(() => setGameState('ending_plane'), 500);
+              delete result.flags.triggerPlaneEnding;
+            }
+            if (result.flags && result.flags.triggerChipEnding) {
+              setIsPlaying(false);
+              setTimeout(() => setGameState('ending_chip'), 500);
+              delete result.flags.triggerChipEnding;
+            }
+
+            if (result.flags?.arrived && LOCATIONS.some(loc => loc.id === result.flags.arrived)) {
+              setCurrentLocation(result.flags.arrived);
+              setTravelState(null);
+              setCounters(prev => ({ ...prev, locationHours: 0 }));
+              logStr += `\n📍 강제 이동으로 현재 위치가 [${LOCATIONS.find(loc => loc.id === result.flags.arrived)?.name}]으로 변경되었습니다.`;
+            }
+            if (result.flags) setFlags(prev => ({ ...prev, ...result.flags }));
+
+            if (result.updateLoyalty || result.updateAffinity) {
+              setCompanions(prev => prev.map(c => {
+                let newC = { ...c };
+                if (result.updateLoyalty && c.id === result.updateLoyalty.id) newC.loyalty = Math.min(100, Math.max(0, newC.loyalty + result.updateLoyalty.delta));
+                if (result.updateAffinity && c.id === result.updateAffinity.id) newC.affinity = Math.min(100, Math.max(0, newC.affinity + result.updateAffinity.delta));
+                return newC;
+              }));
+            }
+
+            if (result.itemsLost) {
+              result.itemsLost.forEach(itemToLose => {
+                const idx = currentInv.indexOf(itemToLose);
+                if (idx > -1) {
+                  currentInv.splice(idx, 1);
+                  if (WEAPONS.includes(itemToLose)) {
+                    delete currentDurability[itemToLose];
+                  }
+                }
+              });
+            }
+
+            let pendingItemsToModal = [];
+
+            if (result.itemsGained) {
+              if (companions.some(c => c.id === 'stray_cat') && Math.random() < 0.25) {
+                result.itemsGained.push('pet_food');
+                logStr += " 🐈 (고양이 '나비'가 구석에서 사료 봉지를 물어왔습니다!)";
+              }
+
+              result.itemsGained.forEach(item => {
+                if (WEAPONS.includes(item) && currentDurability[item] === undefined) {
+                  currentDurability[item] = 2;
+                }
+                if (currentInv.length < maxInventorySlots) {
+                  currentInv.push(item);
+                } else {
+                  pendingItemsToModal.push(item);
+                }
+              });
+            }
+
+            setInventory(currentInv);
+            setWeaponDurability(currentDurability);
+
+            if (result.addCompanion) setCompanions(prev => [...prev, result.addCompanion]);
+            if (result.removeCompanionId) setCompanions(prev => prev.filter(c => c.id !== result.removeCompanionId));
+
+            if (logStr) setLogs(prev => [...prev, { timeStr: formatTime(counters.totalHours), text: logStr, type: 'event' }].slice(-MAX_LOGS));
+            
+            setActiveEvent(null);
+
+            if (pendingItemsToModal.length > 0) {
+              setIsPlaying(false);
+              setDiscardModal({ open: true, pendingItems: pendingItemsToModal });
+            } else {
+              setTimeout(() => {
+                setStats(currentStats => { 
+                  if(gameState === 'playing' && currentStats.health > 0 && currentStats.hunger > 0 && currentStats.mental > 0) setIsPlaying(true);
+                  return currentStats;
+                });
+              }, 600);
+            }
+          };
+
+          const handleSelectLocation = (locId) => {
+            setDestinationPopupOpen(false);
+            if (locId === currentLocation && !travelState) return;
+            if (activeEvent) {
+              setReservedLocation(locId);
+              setLogs(prev => [...prev, { timeStr: formatTime(counters.totalHours), text: `[이동 예약] 현재 상황이 종료된 후 [${LOCATIONS.find(l => l.id === locId)?.name}](으)로 자동 이동합니다.`, type: 'event' }].slice(-MAX_LOGS));
+              return;
+            }
+            
+            const targetLoc = LOCATIONS.find(l => l.id === locId);
+            const currentLoc = LOCATIONS.find(l => l.id === currentLocation) || LOCATIONS[0];
+            
+            const dist = Math.abs(targetLoc.distance - currentLoc.distance);
+            let baseHours = 1 + (dist * 2);
+
+            let vData = vehicle ? VEHICLE_TYPES[vehicle.id] : null;
+            let actualTravelTime = baseHours;
+            let vehicleStatusNote = "";
+            let travelVehicleId = null;
+            let travelVehicleCost = 0;
+            let actualSpeedMult = 1;
+
+            if (vehicle && vData) {
+              const cost = dist * vData.costPerDist;
+              if (vData.type === 'stamina' && stats.health <= 20) {
+                setVehicle(null);
+                actualTravelTime = baseHours;
+                vehicleStatusNote = ' (⚠️ 체력 20 이하라 자전거를 이용할 수 없어 도보 이동)';
+              } else if (vData.type === 'stamina') {
+                actualTravelTime = Math.max(1, Math.round(baseHours * vData.speedMult));
+                actualSpeedMult = vData.speedMult;
+                setStats(s => ({ ...s, hunger: Math.max(0, s.hunger - cost), health: Math.max(1, s.health - Math.round(cost/2)) }));
+                vehicleStatusNote = ` (🚲 자전거 이동: 체력/포만감 추가 소모)`;
+              } else if (vehicle.cap >= cost) {
+                actualTravelTime = Math.max(1, Math.round(baseHours * vData.speedMult));
+                actualSpeedMult = vData.speedMult;
+                travelVehicleId = vehicle.id;
+                travelVehicleCost = cost;
+                vehicleStatusNote = ` (${vData.name} 이동: 이동 중 게이지 소모)`;
+              } else {
+                actualTravelTime = baseHours;
+                vehicleStatusNote = ` (⚠️ ${vData.name} 연료/배터리가 부족해 도보 이동)`;
+              }
+            }
+
+            setCounters(prev => ({ ...prev, hasShelter: false, locationHours: 0 }));
+            setTravelState({
+              targetLoc: targetLoc.id,
+              hoursLeft: actualTravelTime,
+              destName: targetLoc.name,
+              vehicleNote: vehicleStatusNote,
+              vehicleId: travelVehicleId,
+              vehicleCostTotal: travelVehicleCost,
+              vehicleTravelHours: actualTravelTime,
+              speedMult: actualSpeedMult,
+              distanceRemaining: dist,
+              totalDistance: dist,
+              baseTravelHours: baseHours
+            });
+            setLogs(prev => [...prev, { timeStr: formatTime(counters.totalHours), text: `[이동 시작] ${targetLoc.name}(으)로 이동합니다. (예상 소요 시간: ${actualTravelTime}시간)${vehicleStatusNote}`, type: 'event' }].slice(-MAX_LOGS));
+            setIsPlaying(true);
+          };
+
+          useEffect(() => {
+            if (!activeEvent && reservedLocation && isPlaying && gameState === 'playing') {
+              const loc = reservedLocation;
+              setReservedLocation(null);
+            setTravelState(null);
+              handleSelectLocation(loc);
+            }
+          }, [activeEvent, reservedLocation, isPlaying, gameState]);
+
+          const handleInventoryItemClick = (itemId) => {
+            const actions = {
+              medkit: { action: 'heal', title: '구급상자 사용', effect: '건강을 회복합니다. 기본 회복량은 +50이며, 동료 조합에 따라 더 많이 회복할 수 있습니다.' },
+              ration: { action: 'eat_ration', title: '전투식량 섭취', effect: '포만감 +40, 건강 +10. 요리사 동료가 있으면 포만감 회복량이 증가하고, 동료들의 충성도와 호감도도 상승합니다.' },
+              nutrition_bar: { action: 'eat_nutrition_bar', title: '영양바 섭취', effect: '포만감 +25, 건강 +15. 가볍게 먹고 체력을 보충할 수 있습니다.' },
+              soap: { action: 'use_soap', title: '비누 사용', effect: '위생 +60, 정신력 +10.' },
+              wet_wipes: { action: 'use_wipes', title: '물티슈 사용', effect: '위생 +35.' },
+              gas_can: { action: 'refuel_vehicle', title: '휘발유 주유', effect: '보유 차량의 연료를 최대 50만큼 회복합니다.' },
+              battery_pack: { action: 'charge_kickboard', title: '배터리 팩 사용', effect: '전동 킥보드의 배터리를 최대 40만큼 회복합니다.' },
+              pet_food: { action: 'feed_pet', title: '동료 동물에게 사료 주기', effect: '군견 또는 길고양이 동료의 충성도와 호감도를 최대로 회복하고, 정신력 +25.' },
+              chocolate: { action: 'use_chocolate', title: '초콜릿 섭취', effect: '정신력 +10, 포만감 +10.' },
+              coffee: { action: 'use_coffee', title: '캔커피 섭취', effect: '정신력 +20, 포만감 +10.' },
+              cigarette: { action: 'smoke', title: '담배 피우기', effect: '정신력 +40. 라이터가 필요합니다.' }
+            };
+            const entry = actions[itemId];
+            if (!entry) return;
+            let error = null;
+            if (itemId === 'gas_can' && (!vehicle || !['motorcycle','car'].includes(vehicle.id))) error = '주유 가능한 오토바이나 자동차가 없습니다.';
+            if (itemId === 'battery_pack' && (!vehicle || vehicle.id !== 'kickboard')) error = '충전할 전동 킥보드가 없습니다.';
+            if (itemId === 'pet_food' && !companions.some(c => c.role === '군견' || c.role === '길고양이')) error = '사료를 줄 군견 또는 길고양이 동료가 없습니다.';
+            if (itemId === 'cigarette' && !inventory.includes('lighter')) error = '담배를 피우려면 라이터가 필요합니다.';
+            setItemUseModal({ itemId, ...entry, error });
+          };
+
+          const handleCraftingUse = (actionType) => {
+            const maxHealth = trait?.id === 'strong' ? 120 : 100;
+            const synergies = checkSynergies();
+
+            if (actionType === 'smoke') {
+              setInventory(prev => { const newInv = [...prev]; newInv.splice(newInv.indexOf('cigarette'), 1); return newInv; });
+              setStats(prev => ({ ...prev, mental: Math.min(100, prev.mental + 40) }));
+            } else if (actionType === 'heal') {
+              let healAmount = companions.some(c => c.id === 'pharmacist') ? 70 : 50;
+              if (synergies.medicalTeam) healAmount = 90; 
+              setInventory(prev => { const newInv = [...prev]; newInv.splice(newInv.indexOf('medkit'), 1); return newInv; });
+              setStats(prev => ({ ...prev, health: Math.min(maxHealth, prev.health + healAmount) }));
+            } else if (actionType === 'eat_nutrition_bar') {
+              setInventory(prev => { const newInv = [...prev]; newInv.splice(newInv.indexOf('nutrition_bar'), 1); return newInv; });
+              setStats(prev => ({ ...prev, hunger: Math.min(100, prev.hunger + 25), health: Math.min(maxHealth, prev.health + 15) }));
+            } else if (actionType === 'eat_ration') {
+              const hungerAmount = companions.some(c => c.id === 'chef') ? 50 : 40;
+              setInventory(prev => { const newInv = [...prev]; newInv.splice(newInv.indexOf('ration'), 1); return newInv; });
+              setStats(prev => ({ ...prev, hunger: Math.min(100, prev.hunger + hungerAmount), health: Math.min(maxHealth, prev.health + 10) }));
+              setCompanions(prev => prev.map(c => ({ ...c, loyalty: Math.min(100, c.loyalty + 10), affinity: Math.min(100, c.affinity + 5) })));
+            } else if (actionType === 'use_soap') {
+              setInventory(prev => { const newInv = [...prev]; newInv.splice(newInv.indexOf('soap'), 1); return newInv; });
+              setStats(prev => ({ ...prev, hygiene: Math.min(100, prev.hygiene + 60), mental: Math.min(100, prev.mental + 10) }));
+            } else if (actionType === 'use_wipes') {
+              setInventory(prev => { const newInv = [...prev]; newInv.splice(newInv.indexOf('wet_wipes'), 1); return newInv; });
+              setStats(prev => ({ ...prev, hygiene: Math.min(100, prev.hygiene + 35) }));
+            } else if (actionType === 'refuel_vehicle') {
+              setInventory(prev => { const newInv = [...prev]; newInv.splice(newInv.indexOf('gas_can'), 1); return newInv; });
+              setVehicle(v => ({ ...v, cap: Math.min(100, v.cap + 50) }));
+            } else if (actionType === 'charge_kickboard') {
+              setInventory(prev => { const newInv = [...prev]; newInv.splice(newInv.indexOf('battery_pack'), 1); return newInv; });
+              setVehicle(v => ({ ...v, cap: Math.min(100, v.cap + 40) }));
+            } else if (actionType === 'use_chocolate') {
+              setInventory(prev => { const newInv = [...prev]; newInv.splice(newInv.indexOf('chocolate'), 1); return newInv; });
+              setStats(prev => ({ ...prev, mental: Math.min(100, prev.mental + 10), hunger: Math.min(100, prev.hunger + 10) }));
+            } else if (actionType === 'use_coffee') {
+              setInventory(prev => { const newInv = [...prev]; newInv.splice(newInv.indexOf('coffee'), 1); return newInv; });
+              setStats(prev => ({ ...prev, mental: Math.min(100, prev.mental + 20), hunger: Math.min(100, prev.hunger + 10) }));
+            } else if (actionType === 'feed_pet') {
+              setInventory(prev => { const newInv = [...prev]; newInv.splice(newInv.indexOf('pet_food'), 1); return newInv; });
+              setCompanions(prev => prev.map(c => (c.role === '군견' || c.role === '길고양이') ? { ...c, loyalty: 100, affinity: 100 } : c));
+              setStats(prev => ({ ...prev, mental: Math.min(100, prev.mental + 25) }));
+            }
+
+            const effectMessages = {
+              smoke: '정신력 +40 · 담배 1개 소모',
+              heal: `건강 +${synergies.medicalTeam ? 90 : (companions.some(c => c.id === 'pharmacist') ? 70 : 50)} · 구급상자 1개 소모`,
+              eat_ration: `포만감 +${companions.some(c => c.id === 'chef') ? 50 : 40}, 건강 +10 · 전투식량 1개 소모`,
+              eat_nutrition_bar: '포만감 +25, 건강 +15 · 영양바 1개 소모',
+              use_soap: '위생 +60, 정신력 +10 · 비누 1개 소모',
+              use_wipes: '위생 +35 · 물티슈 1개 소모',
+              refuel_vehicle: '차량 연료 +50 · 휘발유 캔 1개 소모',
+              charge_kickboard: '킥보드 배터리 +40 · 배터리 팩 1개 소모',
+              use_chocolate: '정신력 +10, 포만감 +10 · 초콜릿 1개 소모',
+              use_coffee: '정신력 +20, 포만감 +10 · 캔커피 1개 소모',
+              feed_pet: '동물 동료 충성도·호감도 최대 회복, 정신력 +25 · 사료 1개 소모'
+            };
+            if (effectMessages[actionType]) {
+              setStatusToast(`✓ ${effectMessages[actionType]}`);
+              setTimeout(() => setStatusToast(''), 2800);
+            }
+          };
+
+          const getItemVisual = (id) => {
+            const data = { 
+              'bat': { icon: '🏏', name: '야구 배트' }, 'medkit': { icon: '🚑', name: '구급상자' }, 
+              'lighter': { icon: '🔥', name: '라이터' }, 'cigarette': { icon: '🚬', name: '담배' }, 
+              'soju': { icon: '🍾', name: '소주' }, 'baton': { icon: '🚓', name: '진압봉' }, 
+              'ration': { icon: '🥫', name: '전투식량' }, 'nutrition_bar': { icon: '🍫', name: '영양바' }, 'knife': { icon: '🗡️', name: '군용 단검' },
+              'soap': { icon: '🧼', name: '비누' }, 'wet_wipes': { icon: '🧻', name: '물티슈' },
+              'radio': { icon: '📻', name: '무전기' }, 'gas_can': { icon: '⛽', name: '휘발유 캔' },
+              'battery_pack': { icon: '🔋', name: '휴대용 배터리' }, 'pet_food': { icon: '🥩', name: '반려동물 사료' }, 
+              'chocolate': { icon: '🍫', name: '초콜릿' }, 'coffee': { icon: '☕', name: '캔커피' },
+              'pistol': { icon: '🔫', name: '권총' }, 'shotgun': { icon: '💥', name: '샷건' }, 'machete': { icon: '🗡️', name: '마체테' },
+              'semiconductor_chip': { icon: '🧩', name: '반도체칩' },
+              'pre_clinical_vaccine': { icon: '💉', name: '비임상 백신' }, 'completed_vaccine': { icon: '🧪', name: '완성된 백신' }
+            };
+            return data[id] || { icon: '📦', name: '알 수 없음' };
+          };
+
+          const handleDiscardChoice = (discardedItemIndex, isPendingItem = false) => {
+            if (isPendingItem) {
+              const updatedPending = [...discardModal.pendingItems];
+              const droppedItem = updatedPending.splice(discardedItemIndex, 1)[0];
+              
+              setLogs(prev => [...prev, { timeStr: formatTime(counters.totalHours), text: `🎒 가방 공간 부족으로 새 아이템 [${getItemVisual(droppedItem).name}] 획득을 포기했습니다.`, type: 'event' }].slice(-MAX_LOGS));
+              
+              if (updatedPending.length > 0 && inventory.length >= maxInventorySlots) {
+                setDiscardModal({ open: true, pendingItems: updatedPending });
+              } else {
+                let finalDurability = { ...weaponDurability };
+                updatedPending.forEach(item => {
+                  if (WEAPONS.includes(item) && finalDurability[item] === undefined) {
+                    finalDurability[item] = 2;
+                  }
+                });
+                setWeaponDurability(finalDurability);
+                setInventory(prev => [...prev, ...updatedPending].slice(0, maxInventorySlots));
+                setDiscardModal({ open: false, pendingItems: [] });
+                setIsPlaying(true);
+              }
+            } else {
+              const updatedInv = [...inventory];
+              const droppedItem = updatedInv.splice(discardedItemIndex, 1)[0];
+              
+              let finalDurability = { ...weaponDurability };
+              if (WEAPONS.includes(droppedItem)) {
+                delete finalDurability[droppedItem];
+              }
+
+              const nextPending = [...discardModal.pendingItems];
+              if (nextPending.length > 0) {
+                const newAdded = nextPending.shift();
+                
+                setLogs(prev => [...prev, { timeStr: formatTime(counters.totalHours), text: `🎒 가방이 가득 차서 [${getItemVisual(droppedItem).name}]을(를) 버리고 [${getItemVisual(newAdded).name}]을(를) 획득했습니다.`, type: 'event' }].slice(-MAX_LOGS));
+                
+                if (WEAPONS.includes(newAdded) && finalDurability[newAdded] === undefined) {
+                  finalDurability[newAdded] = 2;
+                }
+                updatedInv.push(newAdded);
+              } else {
+                setLogs(prev => [...prev, { timeStr: formatTime(counters.totalHours), text: `🎒 가방에서 [${getItemVisual(droppedItem).name}]을(를) 버렸습니다.`, type: 'event' }].slice(-MAX_LOGS));
+              }
+              
+              setWeaponDurability(finalDurability);
+              setInventory(updatedInv);
+              
+              if (nextPending.length > 0 && updatedInv.length >= maxInventorySlots) {
+                setDiscardModal({ open: true, pendingItems: nextPending });
+              } else {
+                setDiscardModal({ open: false, pendingItems: [] });
+                setIsPlaying(true);
+              }
+            }
+          };
+
+          const currentDay = Math.floor(counters.totalHours / 24) + 1;
+          const maxHealth = trait?.id === 'strong' ? 120 : 100;
+          const activeSynergies = checkSynergies();
+
+          if (gameState === 'opening') {
+            return (
+              <div className="min-h-screen flex flex-col items-center justify-center p-6 font-sans relative">
+                <h1 className="text-5xl md:text-7xl font-black text-[#d84b4b] mb-10 tracking-[0.2em] z-10">생존왕 THE ZOMBIE</h1>
+                <button onClick={() => setGameState('video')} className="px-12 py-4 border border-[#d84b4b] text-[#d84b4b] hover:bg-[#d84b4b] hover:text-[#0a0505] font-bold tracking-widest transition-colors duration-300 z-10">지옥문 열기</button>
+              </div>
+            );
+          }
+
+          if (gameState === 'video') {
+            return (
+              <div className="min-h-screen flex flex-col items-center justify-center bg-black relative animate-fade-in">
+                <video 
+                  autoPlay
+                  muted
+                  playsInline
+                  preload="auto"
+                  onCanPlay={(e) => { e.currentTarget.muted = true; e.currentTarget.play().catch(() => {}); }}
+                  onEnded={() => setGameState('setup')}
+                  onError={() => setGameState('setup')}
+                  className="w-full h-full object-cover absolute inset-0"
+                  src="https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/%EC%83%9D%EC%A1%B4%EC%99%95%20%EC%98%A4%ED%94%84%EB%8B%9D%20%EC%98%81%EC%83%81.mp4"
+                />
+                <button 
+                  onClick={() => setGameState('setup')} 
+                  className="absolute bottom-10 right-10 px-8 py-3 border border-white/50 bg-black/60 text-white font-bold rounded z-10 hover:bg-black hover:border-white transition-all tracking-widest"
+                >
+                  스킵하기
+                </button>
+              </div>
+            );
+          }
+
+          if (gameState === 'setup') {
+            return (
+              <div className="min-h-screen flex flex-col items-center justify-center p-6 font-sans animate-fade-in">
+                <div className="w-full max-w-md bg-[#1a1111] border border-[#3a1f1f] p-8 space-y-6 shadow-2xl">
+                  <h2 className="text-xl font-black text-[#d84b4b] text-center border-b border-[#3a1f1f] pb-4 tracking-widest">생존자 설정</h2>
+                  <div className="space-y-2">
+                    <label className="text-xs text-[#8f7a7a] font-bold">생존자 이름</label>
+                    <input type="text" value={player.name} onChange={(e) => setPlayer({ ...player, name: e.target.value })} placeholder="이름을 입력하세요" className="w-full bg-[#110b0b] border border-[#3a1f1f] p-3 text-sm focus:border-[#d84b4b] text-[#f8f8f2] outline-none" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-[#8f7a7a] font-bold">성별 선택</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {['남성', '여성'].map(g => (
+                        <button key={g} onClick={() => setPlayer({ ...player, gender: g })} className={`py-2.5 text-xs font-bold border transition-colors ${player.gender === g ? 'bg-[#d84b4b] border-[#d84b4b] text-[#0a0505]' : 'bg-[#110b0b] border-[#3a1f1f] text-[#8f7a7a]'}`}>
+                          {g === '남성' ? '👨 남성' : '👩 여성'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-5 bg-[#1a1111] border-2 border-[#d84b4b] text-sm text-[#f8f8f2] space-y-2.5 leading-relaxed shadow-[0_0_15px_rgba(216,75,75,0.2)] rounded-sm">
+                    <h3 className="text-[#d84b4b] font-black text-base border-b border-[#3a1f1f] pb-2 mb-2">📜 좀비세계에서 살아남는 법</h3>
+                    <p><span className="text-[#a67c00] font-bold">🏆 생존 목표</span>: <br/>
+                      <span className="block ml-3 mt-1 text-xs text-[#c7b8b8]">1. <span className="text-[#2e8b57]">🛡️ 안전지대로 이동하라</span></span>
+                      <span className="block ml-3 text-xs text-[#c7b8b8]">2. <span className="text-[#5a86b5]">🧪 백신을 제작해 전달하라</span></span>
+                      <span className="block ml-3 text-xs text-[#c7b8b8]">3. <span className="text-[#38587a]">✈️ 경비기를 가동해 탈출하라</span></span>
+                      <span className="block ml-3 text-xs text-[#e58a2b]">4. <span>🤝 4명의 동료와 특별한 물건을 찾아라</span></span>
+                    </p>
+                  </div>
+                  <button onClick={startGame} disabled={!player.name} className="w-full bg-[#d84b4b] text-[#0a0505] font-bold py-4 mt-2 tracking-widest disabled:bg-[#2b1b1b] disabled:text-[#4a1c1c] transition-colors">생존 시작</button>
+                </div>
+              </div>
+            );
+          }
+
+          if (gameState === 'victory_vaccine') {
+            return (
+              <div className="min-h-screen flex flex-col items-center justify-center p-6 font-sans animate-fade-in max-w-2xl mx-auto">
+                <h1 className="text-5xl md:text-6xl font-black text-[#5a86b5] mb-2 tracking-widest">인류의 영웅</h1>
+                <h2 className="text-xl font-bold text-[#f8f8f2] mb-4">생존자: {player.name}</h2>
+                <div className="bg-[#17232e] border-2 border-[#5a86b5] p-5 w-full text-center mb-6 shadow-xl space-y-2">
+                  <div className="text-xs font-bold text-[#5a86b5] tracking-wider uppercase">🧪 구원 성공: 백신 전달 완수</div>
+                  <p className="text-sm md:text-base text-[#f8f8f2] font-bold italic leading-relaxed break-keep">
+                    "반려동물의 고귀한 희생과 당신의 험난한 여정 끝에 마침내 완성된 백신이 군사 통제구역에 전달되었습니다. 인류는 당신 덕분에 멸망을 피했고, 당신은 전설적인 영웅이 되었습니다."
+                  </p>
+                </div>
+
+                <div className="bg-[#11161a] border border-[#1f2a3a] p-6 text-center text-sm text-[#c7b8b8] space-y-2 w-full mb-4">
+                  <h2 className="text-[#5a86b5] font-bold text-lg mb-3">최종 구원 기록</h2>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <p>구원 날짜: {formatTime(counters.totalHours)} ({currentDay}일 차)</p>
+                    <p>도착 장소: {LOCATIONS.find(l => l.id === currentLocation)?.name || '알 수 없음'}</p>
+                    <p>함께 탈출한 동료: {companions.length}명</p>
+                    <p>잔여 물품: {inventory.length}개</p>
+                  </div>
+                </div>
+                
+                <div className="w-full bg-[#110b0b] border border-[#3a1f1f] p-4 text-xs h-56 overflow-y-auto custom-scrollbar mb-6 space-y-2 text-left">
+                  <h3 className="text-[#2e8b57] font-bold mb-2 border-b border-[#3a1f1f] pb-1">📜 전체 생존 일지 기록</h3>
+                  {logs.map((log, idx) => (
+                    <div key={idx} className={`flex space-x-2 ${log.type === 'event' ? 'text-[#d84b4b] font-bold' : 'text-[#8f7a7a]'}`}>
+                      <span className="shrink-0 text-[10px]">[{log.timeStr}]</span>
+                      <span className="leading-relaxed">{log.text}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button onClick={() => window.location.reload()} className="px-8 py-3 border border-[#5a86b5] text-[#5a86b5] hover:bg-[#5a86b5] hover:text-[#0a0505] transition-colors tracking-widest font-bold">새로운 전설 도전</button>
+              </div>
+            );
+          }
+          
+          if (gameState === 'ending_betrayal') {
+            return (
+              <div className="min-h-screen flex flex-col items-center justify-center p-6 font-sans animate-fade-in max-w-2xl mx-auto">
+                <h1 className="text-5xl md:text-6xl font-black text-[#8f7a7a] mb-2 tracking-widest">배신과 고독</h1>
+                <h2 className="text-xl font-bold text-[#f8f8f2] mb-4">생존자: {player.name}</h2>
+                <div className="bg-[#231717] border-2 border-[#8f7a7a] p-5 w-full text-center mb-6 shadow-xl space-y-2">
+                  <div className="text-xs font-bold text-[#8f7a7a] tracking-wider uppercase">배드 엔딩: 버려진 자</div>
+                  <p className="text-sm md:text-base text-[#f8f8f2] font-bold italic leading-relaxed break-keep">
+                    "구조대가 도착했지만, 그동안의 학대와 배신감에 눈이 먼 동료들이 당신을 버려두고 혼자 탈출 헬기에 탑승합니다. 결국 당신은 무너진 도시에 홀로 남겨집니다."
+                  </p>
+                </div>
+                
+                <div className="w-full bg-[#110b0b] border border-[#3a1f1f] p-4 text-xs h-56 overflow-y-auto custom-scrollbar mb-6 space-y-2 text-left">
+                  <h3 className="text-[#2e8b57] font-bold mb-2 border-b border-[#3a1f1f] pb-1">📜 전체 생존 일지 기록</h3>
+                  {logs.map((log, idx) => (
+                    <div key={idx} className={`flex space-x-2 ${log.type === 'event' ? 'text-[#d84b4b] font-bold' : 'text-[#8f7a7a]'}`}>
+                      <span className="shrink-0 text-[10px]">[{log.timeStr}]</span>
+                      <span className="leading-relaxed">{log.text}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button onClick={() => window.location.reload()} className="px-8 py-3 border border-[#8f7a7a] text-[#8f7a7a] hover:bg-[#8f7a7a] hover:text-[#0a0505] transition-colors tracking-widest font-bold">다시 시작</button>
+              </div>
+            );
+          }
+
+          if (gameState === 'ending_mutant') {
+            return (
+              <div className="min-h-screen flex flex-col items-center justify-center p-6 font-sans animate-fade-in max-w-2xl mx-auto">
+                <h1 className="text-5xl md:text-6xl font-black text-[#8b2626] mb-2 tracking-widest">변이체 조종자</h1>
+                <h2 className="text-xl font-bold text-[#f8f8f2] mb-4">생존자: {player.name}</h2>
+                <div className="bg-[#1a0b0b] border-2 border-[#8b2626] p-5 w-full text-center mb-6 shadow-xl space-y-2">
+                  <div className="text-xs font-bold text-[#8b2626] tracking-wider uppercase">다크 히어로 엔딩: 감염의 지배자</div>
+                  <p className="text-sm md:text-base text-[#f8f8f2] font-bold italic leading-relaxed break-keep">
+                    "바이러스에 완전히 감염되었으나 강인한 정신력으로 이성을 잃지 않고 변이 반응을 적응해냅니다. 좀비들이 당신을 공격하지 않고 오히려 명령에 따르기 시작하면서, 감염자 무리를 지휘하는 수장이 됩니다."
+                  </p>
+                </div>
+                
+                <div className="w-full bg-[#110b0b] border border-[#3a1f1f] p-4 text-xs h-56 overflow-y-auto custom-scrollbar mb-6 space-y-2 text-left">
+                  <h3 className="text-[#2e8b57] font-bold mb-2 border-b border-[#3a1f1f] pb-1">📜 전체 생존 일지 기록</h3>
+                  {logs.map((log, idx) => (
+                    <div key={idx} className={`flex space-x-2 ${log.type === 'event' ? 'text-[#d84b4b] font-bold' : 'text-[#8f7a7a]'}`}>
+                      <span className="shrink-0 text-[10px]">[{log.timeStr}]</span>
+                      <span className="leading-relaxed">{log.text}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button onClick={() => window.location.reload()} className="px-8 py-3 border border-[#8b2626] text-[#8b2626] hover:bg-[#8b2626] hover:text-[#0a0505] transition-colors tracking-widest font-bold">다시 시작</button>
+              </div>
+            );
+          }
+
+          if (gameState === 'ending_chip') {
+            return (
+              <div className="min-h-screen flex flex-col items-center justify-center p-6 font-sans animate-fade-in max-w-2xl mx-auto">
+                <h1 className="text-5xl md:text-6xl font-black text-[#e58a2b] mb-2 tracking-widest text-center">네 사람의 프로토콜</h1>
+                <h2 className="text-xl font-bold text-[#f8f8f2] mb-4">생존자: {player.name}</h2>
+                <div className="bg-[#21170d] border-2 border-[#e58a2b] p-5 w-full text-center mb-6 shadow-xl space-y-2">
+                  <div className="text-xs font-bold text-[#e58a2b] tracking-wider uppercase">생존 엔딩: 반도체칩 기반 생존 거점 가동</div>
+                  <p className="text-sm md:text-base text-[#f8f8f2] font-bold italic leading-relaxed break-keep">
+                    "각자의 역할에 충실했던 네 명의 동료는 반도체 메모리칩을 핵심으로 삼아 AI 바이브 코딩으로 안전하게 작동하는 생존 지원 프로세스를 만들어냈습니다. 마침내 프로세스가 가동되며 생존자들을 보호할 안전 구역이 구축되었습니다. 네 사람의 협력은 절망 속에서 새로운 희망이 되었습니다."
+                  </p>
+                </div>
+                <div className="bg-[#11100e] border border-[#4a321d] p-6 text-center text-sm text-[#c7b8b8] space-y-2 w-full mb-4">
+                  <h2 className="text-[#e58a2b] font-bold text-lg mb-3">최종 생존 기록</h2>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <p>생존 시간: {formatTime(counters.totalHours)} ({currentDay}일 차)</p>
+                    <p>작전 장소: {LOCATIONS.find(l => l.id === currentLocation)?.name || '질병통제연구소'}</p>
+                    <p>동료: {companions.filter(c => ['pharmacist','nurse','police','chef'].includes(c.id)).length}/4명</p>
+                    <p>반도체칩: 프로토콜 가동 완료</p>
+                  </div>
+                </div>
+                <div className="w-full bg-[#110b0b] border border-[#3a1f1f] p-4 text-xs h-56 overflow-y-auto custom-scrollbar mb-6 space-y-2 text-left">
+                  <h3 className="text-[#2e8b57] font-bold mb-2 border-b border-[#3a1f1f] pb-1">📜 전체 생존 일지 기록</h3>
+                  {logs.map((log, idx) => (
+                    <div key={idx} className={`flex space-x-2 ${log.type === 'event' ? 'text-[#d84b4b] font-bold' : 'text-[#8f7a7a]'}`}>
+                      <span className="shrink-0 text-[10px]">[{log.timeStr}]</span>
+                      <span className="leading-relaxed">{log.text}</span>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => window.location.reload()} className="px-8 py-3 border border-[#e58a2b] text-[#e58a2b] hover:bg-[#e58a2b] hover:text-[#0a0505] transition-colors tracking-widest font-bold">새로운 생존에 도전</button>
+              </div>
+            );
+          }
+
+          if (gameState === 'ending_plane') {
+            return (
+              <div className="min-h-screen flex flex-col items-center justify-center p-6 font-sans animate-fade-in max-w-2xl mx-auto">
+                <h1 className="text-5xl md:text-6xl font-black text-[#38587a] mb-2 tracking-widest">비행기 탈출</h1>
+                <h2 className="text-xl font-bold text-[#f8f8f2] mb-4">생존자: {player.name}</h2>
+                <div className="bg-[#111a23] border-2 border-[#38587a] p-5 w-full text-center mb-6 shadow-xl space-y-2">
+                  <div className="text-xs font-bold text-[#38587a] tracking-wider uppercase">히든 엔딩: 위험지역 탈출</div>
+                  <p className="text-sm md:text-base text-[#f8f8f2] font-bold italic leading-relaxed break-keep">
+                    "다른 장소에서 합류한 공학자 제민과 함께 공항에 도착한 당신은 버려진 비행기를 발견했습니다. 제민은 엔진을 점검하고, 당신은 연료를 주입했습니다. 마침내 엔진이 굉음을 내며 비행기가 활주로를 박차고 올랐고, 두 사람은 감염자들이 들끓는 위험지역을 벗어나 안전한 곳을 향해 날아갔습니다."
+                  </p>
+                </div>
+                
+                <div className="w-full bg-[#110b0b] border border-[#3a1f1f] p-4 text-xs h-56 overflow-y-auto custom-scrollbar mb-6 space-y-2 text-left">
+                  <h3 className="text-[#2e8b57] font-bold mb-2 border-b border-[#3a1f1f] pb-1">📜 전체 생존 일지 기록</h3>
+                  {logs.map((log, idx) => (
+                    <div key={idx} className={`flex space-x-2 ${log.type === 'event' ? 'text-[#d84b4b] font-bold' : 'text-[#8f7a7a]'}`}>
+                      <span className="shrink-0 text-[10px]">[{log.timeStr}]</span>
+                      <span className="leading-relaxed">{log.text}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button onClick={() => window.location.reload()} className="px-8 py-3 border border-[#38587a] text-[#38587a] hover:bg-[#38587a] hover:text-[#0a0505] transition-colors tracking-widest font-bold">다시 시작</button>
+              </div>
+            );
+          }
+
+          if (gameState === 'victory') {
+
+            return (
+              <div className="min-h-screen flex flex-col items-center justify-center p-6 font-sans animate-fade-in max-w-2xl mx-auto">
+                <h1 className="text-5xl md:text-6xl font-black text-[#2e8b57] mb-2 tracking-widest">생존 성공!</h1>
+                <h2 className="text-xl font-bold text-[#f8f8f2] mb-4">생존자: {player.name}</h2>
+                <div className="bg-[#17231a] border-2 border-[#2e8b57] p-5 w-full text-center mb-6 shadow-xl space-y-2">
+                  <div className="text-xs font-bold text-[#2e8b57] tracking-wider uppercase">🚁 구조 성공: 아포칼립스 탈출</div>
+                  <p className="text-sm md:text-base text-[#f8f8f2] font-bold italic leading-relaxed break-keep">
+                    "무전기로 위치를 확인하고 구조대와의 약속 장소에 정확히 도착했습니다. 당신은 잔혹한 지옥에서 끝내 살아남았습니다!"
+                  </p>
+                </div>
+
+                <div className="bg-[#111a13] border border-[#1f3a26] p-6 text-center text-sm text-[#c7b8b8] space-y-2 w-full mb-4">
+                  <h2 className="text-[#2e8b57] font-bold text-lg mb-3">최종 생존 일지 기록</h2>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <p>탈출 날짜: {formatTime(counters.totalHours)} ({currentDay}일 차)</p>
+                    <p>구조된 장소: {LOCATIONS.find(l => l.id === currentLocation)?.name || '알 수 없음'}</p>
+                    <p>함께 탈출한 동료: {companions.length}명</p>
+                    <p>잔여 물품: {inventory.length}개</p>
+                  </div>
+                </div>
+                
+                <div className="w-full bg-[#110b0b] border border-[#3a1f1f] p-4 text-xs h-56 overflow-y-auto custom-scrollbar mb-6 space-y-2 text-left">
+                  <h3 className="text-[#2e8b57] font-bold mb-2 border-b border-[#3a1f1f] pb-1">📜 전체 생존 일지 기록</h3>
+                  {logs.map((log, idx) => (
+                    <div key={idx} className={`flex space-x-2 ${log.type === 'event' ? 'text-[#d84b4b] font-bold' : 'text-[#8f7a7a]'}`}>
+                      <span className="shrink-0 text-[10px]">[{log.timeStr}]</span>
+                      <span className="leading-relaxed">{log.text}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button onClick={() => window.location.reload()} className="px-8 py-3 border border-[#2e8b57] text-[#2e8b57] hover:bg-[#2e8b57] hover:text-[#0a0505] transition-colors tracking-widest font-bold">새로운 생존 도전</button>
+              </div>
+            );
+          }
+
+          if (gameState === 'gameover') {
+            return (
+              <div className="min-h-screen flex flex-col items-center justify-center p-6 font-sans animate-fade-in max-w-2xl mx-auto">
+                <h1 className="text-6xl font-black text-[#d84b4b] mb-2 tracking-widest">사망</h1>
+                <h2 className="text-xl font-bold text-[#f8f8f2] mb-4">생존자: {player.name}</h2>
+                <div className="bg-[#231717] border-2 border-[#d84b4b] p-5 w-full text-center mb-6 shadow-xl space-y-2">
+                  <div className="text-xs font-bold text-[#d84b4b] tracking-wider uppercase">💀 사망 원인: {deathCause.title || '알 수 없음'}</div>
+                  <p className="text-sm md:text-base text-[#f8f8f2] font-bold italic leading-relaxed break-keep">
+                    "{deathCause.desc || '가혹한 세상에서 생을 마감했습니다.'}"
+                  </p>
+                </div>
+
+                <div className="bg-[#1a1111] border border-[#3a1f1f] p-6 text-center text-sm text-[#c7b8b8] space-y-2 w-full mb-4">
+                  <h2 className="text-[#d84b4b] font-bold text-lg mb-3">마지막 생존 기록</h2>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <p>생존 시간: {formatTime(counters.totalHours)} ({currentDay}일)</p>
+                    <p>최후의 장소: {LOCATIONS.find(l => l.id === currentLocation)?.name || '알 수 없음'}</p>
+                    <p>함께한 동료: {companions.length}명</p>
+                    <p>소지한 아이템: {inventory.length}개</p>
+                  </div>
+                </div>
+
+                <div className="w-full bg-[#110b0b] border border-[#3a1f1f] p-4 text-xs h-56 overflow-y-auto custom-scrollbar mb-6 space-y-2 text-left">
+                  <h3 className="text-[#d84b4b] font-bold mb-2 border-b border-[#3a1f1f] pb-1">📜 전체 생존 일지 기록</h3>
+                  {logs.map((log, idx) => (
+                    <div key={idx} className={`flex space-x-2 ${log.type === 'event' ? 'text-[#d84b4b] font-bold' : 'text-[#8f7a7a]'}`}>
+                      <span className="shrink-0 text-[10px]">[{log.timeStr}]</span>
+                      <span className="leading-relaxed">{log.text}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button onClick={() => window.location.reload()} className="px-8 py-3 border border-[#8f7a7a] text-[#8f7a7a] hover:bg-[#f8f8f2] hover:text-[#0a0505] transition-colors tracking-widest font-bold">다시 시작</button>
+              </div>
+            );
+          }
+
+          return (
+            <div className="min-h-screen flex flex-col animate-fade-in relative">
+              <audio id="bgmAudio" loop src="https://raw.githubusercontent.com/Yanghj3119/googleaicamp/main/Survival%20Pressure.mp3" style={{display: 'none'}}></audio>
+
+              {statusToast && (
+                <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[70] w-[calc(100%-2rem)] max-w-xl animate-fade-in pointer-events-none">
+                  <div className="bg-[#21170d]/95 border-2 border-[#e58a2b] text-[#ffe0b3] px-4 py-3 text-xs md:text-sm font-bold text-center shadow-[0_0_22px_rgba(229,138,43,0.22)] rounded-sm">
+                    {statusToast}
+                  </div>
+                </div>
+              )}
+              
+              {discardModal.open && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                  <div className="bg-[#1a1111] border-2 border-[#d84b4b] p-6 max-w-md w-full space-y-4 text-center animate-fade-in">
+                    <h2 className="text-lg font-bold text-[#d84b4b]">⚠️ 가방 공간 부족</h2>
+                    <p className="text-xs text-[#c7b8b8] leading-relaxed">
+                      가방이 꽉 찼습니다! 획득한 새 아이템을 챙기려면 버릴 아이템 하나를 선택해주세요.
+                    </p>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <div className="text-xs text-[#8f7a7a] font-bold mb-1.5 text-left">📦 현재 가방 소지품 (클릭 시 버림):</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {inventory.map((itemId, idx) => (
+                            <button key={idx} onClick={() => handleDiscardChoice(idx, false)} className="p-2 border border-[#3a1f1f] bg-[#110b0b] hover:border-[#d84b4b] text-xs flex items-center space-x-2">
+                              <span className="text-lg">{getItemVisual(itemId).icon}</span>
+                              <span className="truncate">{getItemVisual(itemId).name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="border-t border-[#3a1f1f] pt-3">
+                        <div className="text-xs text-[#d84b4b] font-bold mb-1.5 text-left">✨ 새로 습득 아이템 (클릭 시 포기):</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {discardModal.pendingItems.map((itemId, idx) => (
+                            <button key={idx} onClick={() => handleDiscardChoice(idx, true)} className="p-2 border border-[#d84b4b] bg-[#231717] hover:bg-[#d84b4b] hover:text-[#0a0505] text-xs flex items-center space-x-2">
+                              <span className="text-lg">{getItemVisual(itemId).icon}</span>
+                              <span className="truncate">{getItemVisual(itemId).name} (버리기)</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="h-16 bg-[#110b0b] border-b border-[#3a1f1f] flex items-center justify-between px-6 shrink-0">
+                <span className="font-black text-[#d84b4b] tracking-widest text-lg">생존왕 | THE ZOMBIE</span>
+                <div className="flex items-center space-x-4">
+                  <button 
+                    onClick={() => setIsBgmPlaying(!isBgmPlaying)}
+                    className="text-xs font-bold px-3 py-1 border border-[#3a1f1f] bg-[#1a1111] text-[#8f7a7a] hover:text-[#f8f8f2] transition-colors"
+                  >
+                    BGM {isBgmPlaying ? 'ON' : 'OFF'}
+                  </button>
+                  <div className="text-xs text-[#d84b4b] font-bold">난이도 배율: {(1 + (Math.floor(counters.totalHours / 24) * 0.08)).toFixed(2)}x</div>
+                </div>
+              </div>
+
+              <div className="flex-1 max-w-[1400px] w-full mx-auto grid grid-cols-1 lg:grid-cols-5 gap-4 p-4 min-h-0">
+                
+                <div className="col-span-1 flex flex-col space-y-4 overflow-y-auto custom-scrollbar pr-2">
+                  <div className="bg-[#231717] border border-[#3a1f1f] p-4 text-center">
+                    <h2 className="text-xl font-bold tracking-widest">{player.name} ({player.gender})</h2>
+                    {trait && (
+                      <div className="mt-2 text-xs p-2 border border-[#d84b4b] bg-[#1a1111] text-[#d84b4b] font-bold text-left">
+                        <div className="text-sm mb-0.5">{trait.name}</div>
+                        <div className="text-[10px] text-[#8f7a7a] font-normal">{trait.desc}</div>
+                      </div>
+                    )}
+                    <div className="mt-2 text-xs py-1 px-3 border border-[#3a1f1f] bg-[#110b0b] text-[#c7b8b8]">
+                      {counters.hasShelter ? '안전한 은신처 확보됨' : `[탐색] ${getCurrentLocationName(currentLocation)}`}
+                    </div>
+                  </div>
+
+                  {inventory.includes('radio') && (
+                    <div className="bg-[#1a1a23] border border-[#38587a] p-4">
+                      <h3 className="text-xs font-bold text-[#38587a] mb-2 tracking-widest flex justify-between">
+                        <span>📻 구조대 무전 정보</span>
+                        <span className="text-[#2e8b57]">무전기 작동 중</span>
+                      </h3>
+                      <div className="bg-[#110b0b] p-3 border border-[#38587a] text-xs space-y-1">
+                        <div className="font-bold text-[#f8f8f2]">도착 예정: <span className="text-[#a67c00]">D-{rescueInfo.targetDay} {rescueInfo.hour.toString().padStart(2, '0')}:00</span></div>
+                        <div className="font-bold text-[#f8f8f2]">도착 장소: <span className="text-[#d84b4b]">{LOCATIONS.find(l => l.id === rescueInfo.locationId)?.name}</span></div>
+                        <p className="text-[10px] text-[#8f7a7a] mt-1">* 해당 시각에 도착 구역에 위치하면 엔딩으로 탈출합니다.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-[#231717] border border-[#3a1f1f] p-4">
+                    <h3 className="text-xs font-bold text-[#8f7a7a] mb-2 tracking-widest flex justify-between">
+                      <span>보유 운송수단 (1개만 소지 가능)</span>
+                      {vehicle && <button onClick={() => setVehicle(null)} className="text-[10px] text-[#d84b4b] underline">버리기</button>}
+                    </h3>
+                    {vehicle ? (
+                      <div className="bg-[#110b0b] p-3 border border-[#3a1f1f] text-xs space-y-2">
+                        <div className="font-bold text-[#d84b4b]">{VEHICLE_TYPES[vehicle.id]?.name}</div>
+                        <div className="text-[10px] text-[#8f7a7a]">{VEHICLE_TYPES[vehicle.id]?.desc}</div>
+                        {VEHICLE_TYPES[vehicle.id]?.type === 'stamina' && (
+                          <div className="text-[10px] text-[#d84b4b]">체력 20 이하에서는 이용할 수 없습니다. 자전거 이동은 체력과 포만감을 소모합니다.</div>
+                        )}
+                        {VEHICLE_TYPES[vehicle.id]?.type !== 'stamina' && (
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[10px]">
+                              <span>남은 게이지</span>
+                              <span className="font-bold text-[#a67c00]">{vehicle.cap}%</span>
+                            </div>
+                            <div className="w-full bg-[#1a1111] h-1.5 border border-[#3a1f1f]">
+                              <div className="bg-[#a67c00] h-full transition-all duration-300" style={{ width: `${vehicle.cap}%` }}></div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[#554444] italic">보유한 운송수단이 없습니다. (도보 이동)</p>
+                    )}
+                  </div>
+
+                  <div className="bg-[#231717] border border-[#3a1f1f] p-4 space-y-4">
+                    <div className="space-y-1"><div className="flex justify-between text-xs mb-1">건강<span className="text-[#d84b4b] font-bold">{Math.round(stats.health)} / {maxHealth}</span></div><div className="w-full bg-[#110b0b] h-1.5 border border-[#3a1f1f]"><div className="bg-[#8b2626] h-full transition-all duration-500" style={{ width: `${(stats.health / maxHealth) * 100}%` }}></div></div></div>
+                    <div className="space-y-1"><div className="flex justify-between text-xs mb-1">포만감<span className="text-[#a67c00] font-bold">{Math.round(stats.hunger)}%</span></div><div className="w-full bg-[#110b0b] h-1.5 border border-[#3a1f1f]"><div className="bg-[#a67c00] h-full transition-all duration-500" style={{ width: `${stats.hunger}%` }}></div></div></div>
+                    <div className="space-y-1"><div className="flex justify-between text-xs mb-1">정신력<span className="text-[#38587a] font-bold">{Math.round(stats.mental)}%</span></div><div className="w-full bg-[#110b0b] h-1.5 border border-[#3a1f1f]"><div className="bg-[#38587a] h-full transition-all duration-500" style={{ width: `${stats.mental}%` }}></div></div></div>
+                    <div className="space-y-1"><div className="flex justify-between text-xs mb-1">위생<span className="text-[#2e8b57] font-bold">{Math.round(stats.hygiene)}%</span></div><div className="w-full bg-[#110b0b] h-1.5 border border-[#3a1f1f]"><div className="bg-[#2e8b57] h-full transition-all duration-500" style={{ width: `${stats.hygiene}%` }}></div></div></div>
+                  </div>
+
+                  <div className="bg-[#231717] border border-[#3a1f1f] p-4">
+                    <h3 className="text-xs font-bold text-[#8f7a7a] mb-2 tracking-widest flex justify-between">
+                      <span>동료 무리</span>
+                      <span className="text-[#d84b4b]">{companions.length}명</span>
+                    </h3>
+                    
+                    <div className="space-y-1 mb-3">
+                      {activeSynergies.tacticalUnit && <div className="text-[10px] font-bold text-[#d84b4b] bg-[#110b0b] p-1 border border-[#d84b4b]">✨ [시너지] 치안유지조: 전투 피격 피해 -75%</div>}
+                      {activeSynergies.medicalTeam && <div className="text-[10px] font-bold text-[#2e8b57] bg-[#110b0b] p-1 border border-[#2e8b57]">✨ [시너지] 의료지원팀: 오염패널티 차단 & 극대 회복</div>}
+                      {activeSynergies.survivalBase && <div className="text-[10px] font-bold text-[#a67c00] bg-[#110b0b] p-1 border border-[#a67c00]">✨ [시너지] 생존기지: 허기감소 -50% & 위생방어</div>}
+                      {activeSynergies.wildBeasts && <div className="text-[10px] font-bold text-[#e271ac] bg-[#110b0b] p-1 border border-[#e271ac]">✨ [시너지] 야생 동반자: 힐링 및 보조 보너스</div>}
+                    </div>
+
+                    {companions.length === 0 ? (
+                      <p className="text-xs text-[#554444] italic">함께하는 동료가 없습니다.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {companions.map((comp, idx) => (
+                          <div key={idx} className="p-2 bg-[#110b0b] border border-[#3a1f1f] text-xs">
+                            <div className="font-bold text-[#d84b4b]">{comp.name} ({comp.role}) <span className="text-[10px] text-[#2e8b57] font-normal block mt-0.5">{comp.desc}</span></div>
+                            <div className="flex justify-between items-center text-[10px] mt-1.5">
+                              <span className={comp.loyalty < 35 ? "text-[#d84b4b] font-bold" : "text-[#a67c00]"}>충성도 {comp.loyalty}%</span>
+                              <span className="text-[#e271ac]">호감도 {comp.affinity}%</span>
+                            </div>
+                            <div className="flex gap-1 mt-1 h-1.5">
+                              <div className="w-1/2 bg-[#1a1111] border border-[#221515]"><div className={`h-full transition-all duration-300 ${comp.loyalty < 35 ? 'bg-[#d84b4b]' : 'bg-[#a67c00]'}`} style={{ width: `${comp.loyalty}%` }}></div></div>
+                              <div className="w-1/2 bg-[#1a1111] border border-[#221515]"><div className="bg-[#e271ac] h-full transition-all duration-300" style={{ width: `${comp.affinity}%` }}></div></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="col-span-1 lg:col-span-3 flex flex-col bg-[#110b0b] border border-[#3a1f1f] shadow-inner overflow-hidden h-[500px] md:h-[650px]">
+                  <div className="bg-[#231717] px-4 py-2.5 border-b border-[#3a1f1f] flex justify-between items-center shrink-0">
+                    <h3 className="text-[11px] font-bold text-[#c7b8b8] tracking-widest shrink-0">생존 일지</h3>
+                    <div className="flex justify-center flex-1 mx-2">
+                      <div className="flex items-center space-x-1 bg-[#110b0b] p-1 border border-[#3a1f1f]">
+                        {[ { speed: isPlaying ? 0 : 1, label: isPlaying ? '⏸️ 일시정지' : '▶️ 재생' }, { speed: 2, label: '2x' }, { speed: 4, label: '4x' }, { speed: 8, label: '8x' }, { speed: 16, label: '16x' } ].map((btn, idx) => (
+                          <button key={idx} onClick={() => { if (idx === 0) { setIsPlaying(!isPlaying); if (!isPlaying && gameSpeed === 0) setGameSpeed(1); } else { setGameSpeed(btn.speed); setIsPlaying(true); } }} className={`px-2 py-0.5 text-[10px] font-bold transition-colors ${(idx === 0 && !isPlaying) || (idx > 0 && gameSpeed === btn.speed && isPlaying) ? 'bg-[#d84b4b] text-[#0a0505]' : 'bg-[#1a1111] text-[#8f7a7a] hover:text-[#f8f8f2]'}`}>
+                            {btn.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-bold text-[#8f7a7a] text-right shrink-0">{formatTime(counters.totalHours)}</span>
+                  </div>
+
+                  {activeEvent && (
+                    <div className="border-b-2 border-[#d84b4b] bg-[#231717] p-5 shadow-[0_4px_15px_rgba(216,75,75,0.15)] animate-fade-in shrink-0 max-h-[360px] overflow-y-auto custom-scrollbar">
+                      <p className="text-[#d84b4b] text-[10px] font-bold tracking-widest mb-3 uppercase">{activeEvent.id.includes('travel') ? "이동 이벤트" : "운명의 갈림길"}</p>
+                      <p className="text-[15px] text-[#f8f8f2] mb-6 leading-relaxed break-keep">{activeEvent.text}</p>
+                      <div className="space-y-2">
+                        {activeEvent.choices.map((choice, idx) => (
+                          <button key={idx} onClick={() => handleChoice(choice)} className="w-full text-left bg-[#110b0b] border border-[#3a1f1f] text-[#f8f8f2] px-3 py-3 text-sm leading-relaxed break-keep hover:border-[#d84b4b] transition-colors">
+                            {choice.text}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div ref={logContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                    {logs.map((log, idx) => (
+                      <div key={idx} className={`flex space-x-3 text-sm ${log.type === 'event' ? 'text-[#d84b4b] font-bold' : 'text-[#c7b8b8]'}`}>
+                        <div className="shrink-0 w-24 font-bold text-[#8f7a7a] text-[11px] pt-[3px] tracking-widest">[{log.timeStr}]</div>
+                        <div className="flex-1 leading-relaxed break-keep whitespace-pre-line">{log.text}</div>
+                      </div>
+                    ))}
+                    <div ref={logEndRef}></div>
+                  </div>
+                </div>
+
+                <div className="col-span-1 flex flex-col space-y-4 overflow-y-auto custom-scrollbar pr-2">
+                  <div className="bg-[#231717] border-2 border-[#8a552b] p-4 shadow-[0_0_14px_rgba(138,85,43,0.16)]">
+                    <h3 className="text-xs font-bold text-[#e0a66f] mb-4 tracking-widest flex justify-between border-b border-[#8a552b] pb-3">
+                      <span>🎒 소지품</span>
+                      <span className={inventory.length >= maxInventorySlots ? "text-[#d84b4b]" : "text-[#8f7a7a]"}>{inventory.length} / {maxInventorySlots}</span>
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {Array.from({ length: maxInventorySlots }).map((_, idx) => {
+                        const itemId = inventory[idx];
+                        const isWeapon = WEAPONS.includes(itemId);
+                        const dur = isWeapon ? (weaponDurability[itemId] !== undefined ? weaponDurability[itemId] : 2) : null;
+                        const wRole = isWeapon ? WEAPON_ROLES[itemId] : null;
+
+                        return (
+                          <button key={idx} type="button" onClick={() => itemId && handleInventoryItemClick(itemId)} title={wRole ? wRole.desc : (itemId ? '클릭하여 사용 가능한 아이템인지 확인' : '')} className={`flex flex-col items-center justify-center p-3 border text-center h-20 relative ${itemId ? 'bg-[#110b0b] border-[#6b421e] hover:border-[#f0a34a] cursor-pointer' : 'bg-[#110b0b]/40 border-[#221515] text-[#443333]'}`}>
+                            {itemId ? (
+                              <>
+                                <span className="text-2xl mb-1">{getItemVisual(itemId).icon}</span>
+                                <span className="text-[11px] font-bold">{getItemVisual(itemId).name}</span>
+                                {isWeapon && (
+                                  <span className="absolute top-1 right-1 text-[9px] px-1 bg-[#3a1f1f] text-[#d84b4b] border border-[#d84b4b]">
+                                    내구: {dur}/2
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-xs italic text-[#443333]">비어있음</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] text-[#8f7a7a] mt-2">아이템을 누르면 사용 확인 창이 나타납니다. 무기·퀘스트 아이템은 직접 사용할 수 없습니다.</p>
+                  </div>
+
+                  {(isPlaying || activeEvent) && (
+                    <div className="bg-[#231717] border border-[#38587a] p-4 transition-all">
+                      <div className="flex flex-col items-start gap-2 mb-4">
+                        <div className="flex w-full justify-between items-center gap-2">
+                          <h3 className="text-xs font-bold text-[#38587a] tracking-widest">목적지 이동</h3>
+                          <button onClick={() => setDestinationPopupOpen(v => !v)} className="text-xs px-3 py-2 border border-[#38587a] text-[#a8c5e5] hover:bg-[#38587a] hover:text-white">{destinationPopupOpen ? '목적지 닫기' : '🗺️ 목적지 선택'}</button>
+                        </div>
+                        {activeEvent && <span className="text-[10px] text-[#d84b4b] font-bold animate-pulse">상황 진행 중 (이동 예약 가능)</span>}
+                      </div>
+                      {counters.hasShelter && <p className="text-xs text-[#d84b4b] mb-3 font-bold">⚠️ 이동 시 은신처를 잃게 됩니다.</p>}
+                      {!destinationPopupOpen ? <p className="text-xs text-[#8f7a7a]">현재 위치: {getCurrentLocationName(currentLocation)} · 버튼을 눌러 목적지와 예상 이동 시간을 확인하세요.</p> : <div className="fixed inset-0 z-40 bg-black/75 flex items-center justify-center p-3" onClick={() => setDestinationPopupOpen(false)}><div className="bg-[#1a1111] border-2 border-[#38587a] p-4 w-full max-w-xl max-h-[85vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}><div className="flex justify-between items-center mb-3"><h3 className="font-bold text-[#a8c5e5]">🗺️ 이동할 목적지 선택</h3><button onClick={() => setDestinationPopupOpen(false)} className="text-[#d84b4b] px-2 py-1 border border-[#d84b4b]">닫기 ✕</button></div><p className="text-xs text-[#8f7a7a] mb-3">현재 위치: {getCurrentLocationName(currentLocation)} · 소요 시간은 예상치입니다.</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[65vh] overflow-y-auto custom-scrollbar pr-1">
+                        {LOCATIONS.map(loc => {
+                          const currentLocData = LOCATIONS.find(l => l.id === currentLocation) || LOCATIONS[0];
+                          const dist = Math.abs(loc.distance - currentLocData.distance);
+                          const isCurrent = currentLocation === loc.id && !travelState;
+                          
+                          let speedMod = vehicle ? VEHICLE_TYPES[vehicle.id]?.speedMult || 1 : 1;
+                          let estTime = Math.max(1, Math.round((1 + dist * 2) * speedMod));
+
+                          return (
+                            <button
+                              key={loc.id} onClick={() => handleSelectLocation(loc.id)} disabled={isCurrent && !counters.hasShelter}
+                              className={`text-left border p-3 text-xs transition-colors ${reservedLocation === loc.id ? 'bg-[#2b3a4a] border-[#5a86b5] text-[#f8f8f2]' : (isCurrent && !counters.hasShelter ? 'bg-[#3a1f1f] border-[#d84b4b] text-[#f8f8f2] cursor-default' : 'bg-[#110b0b] border-[#3a1f1f] text-[#8f7a7a] hover:border-[#38587a] hover:text-[#f8f8f2]')}`}
+                            >
+                              <div className="font-bold mb-1 flex justify-between">
+                                <span>
+                                  {loc.name} {isCurrent && !counters.hasShelter ? '(현재 위치)' : ''}
+                                  {reservedLocation === loc.id && <span className="ml-2 text-[#5a86b5] animate-pulse">[예약됨]</span>}
+                                </span>
+                                {!isCurrent && <span className="text-[10px] text-[#38587a]">소요 {estTime}시간</span>}
+                              </div>
+                              <div className="text-[10px] leading-relaxed break-keep">{loc.desc}</div>
+                            </button>
+                          );
+                        })}
+                      </div></div></div>}
+                    </div>
+                  )}
+
+
+                  {itemUseModal && (
+                    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3" onClick={() => setItemUseModal(null)}>
+                      <div className="bg-[#1a1111] border-2 border-[#e58a2b] p-5 w-full max-w-md shadow-[0_0_24px_rgba(229,138,43,0.18)]" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-3 mb-4 border-b border-[#6b421e] pb-3">
+                          <div className="text-3xl">{getItemVisual(itemUseModal.itemId).icon}</div>
+                          <div><h3 className="font-bold text-[#f0a34a]">{itemUseModal.title}</h3><p className="text-[10px] text-[#8f7a7a] mt-1">아이템 사용 확인</p></div>
+                        </div>
+                        <div className="border border-[#3a1f1f] bg-[#110b0b] p-3 mb-4">
+                          <p className="text-xs font-bold text-[#f8f8f2] mb-2">{itemUseModal.error ? '사용할 수 없습니다' : '예상 효과'}</p>
+                          <p className={`text-xs leading-relaxed ${itemUseModal.error ? 'text-[#d84b4b]' : 'text-[#f0a34a]'}`}>{itemUseModal.error || itemUseModal.effect}</p>
+                        </div>
+                        <p className="text-[11px] text-[#8f7a7a] mb-4">{itemUseModal.error ? '조건을 확인한 뒤 다시 시도하세요.' : '사용하면 인벤토리에서 아이템 1개가 소모됩니다. 사용하시겠습니까?'}</p>
+                        <div className="flex gap-2 justify-end">
+                          <button onClick={() => setItemUseModal(null)} className="px-4 py-2 text-xs border border-[#5a4545] text-[#b9a6a6] hover:bg-[#2b1b1b]">{itemUseModal.error ? '닫기' : '취소'}</button>
+                          {!itemUseModal.error && <button onClick={() => { handleCraftingUse(itemUseModal.action); setItemUseModal(null); }} className="px-4 py-2 text-xs border border-[#e58a2b] bg-[#6b421e] text-[#fff0d8] hover:bg-[#a86420]">사용하기</button>}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+
+              </div>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<SurvivalGame />);
+    </script>
+</body>
+</html>
